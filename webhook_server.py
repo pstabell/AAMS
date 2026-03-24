@@ -247,11 +247,23 @@ def stripe_webhook():
     elif event['type'] == 'invoice.payment_failed':
         invoice = event['data']['object']
         customer_id = invoice.get('customer')
-        
-        print(f"Payment failed: Customer {customer_id}")
-        
-        # You might want to send an email or update status
-        # For now, just log it
+        attempt_count = invoice.get('attempt_count', 0)
+
+        print(f"Payment failed: Customer {customer_id}, attempt #{attempt_count}")
+
+        # Mark user as past_due so they are blocked from logging in after retries exhausted.
+        # Stripe also fires customer.subscription.updated with status='past_due', but updating
+        # here as well ensures the DB is correct even if that event is delayed or missed.
+        supabase = get_supabase_client()
+        if supabase and customer_id:
+            try:
+                supabase.table('users').update({
+                    'subscription_status': 'past_due',
+                    'subscription_updated_at': datetime.now().isoformat()
+                }).eq('stripe_customer_id', customer_id).execute()
+                print(f"Marked customer {customer_id} as past_due")
+            except Exception as e:
+                print(f"Database error updating past_due status: {e}")
     
     # Add additional info for checkout events
     if event['type'] == 'checkout.session.completed':

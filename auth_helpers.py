@@ -16,7 +16,7 @@ def check_subscription_status(email: str, supabase: Client) -> dict:
             return {
                 'has_subscription': True,
                 'status': user.get('subscription_status', 'inactive'),
-                'is_active': user.get('subscription_status') == 'active'
+                'is_active': user.get('subscription_status') in ('active', 'trialing')
             }
     except Exception as e:
         st.error(f"Error checking subscription: {e}")
@@ -265,7 +265,7 @@ def show_login_form():
                                 if user.get('password_set', False) and user.get('password_hash'):
                                     # Verify password (for MVP, simple comparison - should hash in production!)
                                     if password == user.get('password_hash'):
-                                        if user.get('subscription_status') == 'active':
+                                        if user.get('subscription_status') in ('active', 'trialing'):
                                             st.session_state["password_correct"] = True
                                             st.session_state["user_email"] = correct_email  # Use correct case from DB
                                             st.session_state["user_id"] = user.get('id')  # Store user_id for proper filtering!
