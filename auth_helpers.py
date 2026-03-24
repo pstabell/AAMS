@@ -383,17 +383,35 @@ def show_subscribe_tab():
             with st.form("subscribe_form"):
                 # Always show email input for autofill/password manager compatibility
                 email = st.text_input(
-                    "Enter your email to subscribe:", 
+                    "Enter your email to subscribe:",
                     value=st.session_state.get("user_email", ""),  # Pre-fill if logged in
                     key="subscribe_email",
                     autocomplete="email"  # Enable browser/password manager autofill
                 )
-                
+
+                # Legal acceptance checkboxes — required before checkout
+                agree_terms = st.checkbox(
+                    "I have read and agree to the [Terms of Service](?page=terms)",
+                    key="agree_terms"
+                )
+                agree_privacy = st.checkbox(
+                    "I have read and agree to the [Privacy Policy](?page=privacy)",
+                    key="agree_privacy"
+                )
+
                 submit = st.form_submit_button("🚀 Start Free Trial", type="primary", use_container_width=True)
-                
+
                 if submit:
-                    if email:
+                    # Validate legal acceptance first
+                    if not agree_terms:
+                        st.error("Please accept the Terms of Service to continue.")
+                    elif not agree_privacy:
+                        st.error("Please accept the Privacy Policy to continue.")
+                    elif not email:
+                        st.error("Please enter your email address to subscribe.")
+                    else:
                         try:
+                            accepted_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
                             # Create checkout session with 14-day free trial
                             checkout_session = stripe.checkout.Session.create(
                                 line_items=[{
@@ -405,20 +423,25 @@ def show_subscribe_tab():
                                 subscription_data={
                                     'trial_period_days': 14,  # 14-day free trial
                                 },
+                                metadata={
+                                    'accepted_terms': 'true',
+                                    'accepted_privacy': 'true',
+                                    'accepted_at': accepted_at,
+                                    'terms_version': '2024-12-06',
+                                    'privacy_version': '2024-12-06',
+                                },
                                 # Remove payment_method_collection - default behavior requires payment method
                                 success_url=os.getenv("RENDER_APP_URL", "https://commission-tracker-app.onrender.com") + "/?session_id={CHECKOUT_SESSION_ID}",
                                 cancel_url=os.getenv("RENDER_APP_URL", "https://commission-tracker-app.onrender.com"),
                                 allow_promotion_codes=True,  # Enable coupon code field in checkout
                             )
-                            st.markdown(f'<meta http-equiv="refresh" content="0; url={checkout_session.url}">', 
+                            st.markdown(f'<meta http-equiv="refresh" content="0; url={checkout_session.url}">',
                                        unsafe_allow_html=True)
                             st.success("Redirecting to secure checkout...")
                             st.balloons()
                         except Exception as e:
                             st.error(f"Error creating checkout session: {e}")
                             st.caption("Please check your internet connection and try again.")
-                    else:
-                        st.error("Please enter your email address to subscribe.")
 
 def generate_reset_token(length=32):
     """Generate a secure random token for password reset."""
