@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { validateServerSession } from "@/lib/server-auth";
 import { calculatePolicyCommission, PolicyCommissionInput } from "@/lib/commission-rules";
@@ -114,7 +114,7 @@ function formatStatementMonth(date: string | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dateFrom = normalizeParam(searchParams.get("dateFrom"));
