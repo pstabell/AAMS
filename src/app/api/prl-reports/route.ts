@@ -179,8 +179,8 @@ export async function GET(request: NextRequest) {
 
     // Process raw data into transactions with commission calculation
     const allTransactions: PRLTransaction[] = [];
-    
-    for (const row of (data || [])) {
+
+    for (const row of (data || []) as Record<string, unknown>[]) {
       const premium = addNumber(row.premium_sold);
       const paid = addNumber(row.agent_paid_amount);
       
