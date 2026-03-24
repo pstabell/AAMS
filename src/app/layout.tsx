@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import DynamicTitle from "@/components/DynamicTitle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agent Management System | Commission Tracking",
-  description: "Track commissions, manage policies, and grow your book of business with Agent Management System.",
+  title: "Agent Commission Tracker",
+  description: "Track commissions, manage policies, and grow your book of business with Agent Commission Tracker.",
 };
 
 export default function RootLayout({
@@ -30,7 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] text-[var(--foreground)]`}
       >
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <DynamicTitle />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

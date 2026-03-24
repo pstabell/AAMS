@@ -5,11 +5,11 @@ import { supabase } from "@/lib/supabase";
 
 const DEMO_EMAIL = "demo@agentcommissiontracker.com";
 
-async function resolveUserId(request: NextRequest, body?: any) {
+async function resolveUserId(request: NextRequest, body?: any): Promise<{ userId: string; error: null } | { userId: null; error: string }> {
   // SECURITY FIX: Validate session instead of trusting spoofable headers
   const { user, error: authError } = await validateServerSession(request);
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return { userId: null, error: "Unauthorized" };
   }
   const headerUserId = user.id;
   if (headerUserId) {
