@@ -25,7 +25,7 @@ sys.modules['streamlit'] = MagicMock()
 sys.modules['supabase'] = MagicMock()
 sys.modules['stripe'] = MagicMock()
 
-from auth_helpers import _validate_legal_acceptance, _build_checkout_kwargs  # noqa: E402
+from auth_helpers import _validate_legal_acceptance, _build_checkout_kwargs, _hash_password, _verify_password  # noqa: E402
 
 _FIXED_AT = '2026-03-24T12:00:00Z'
 _PRICE_ID = 'price_test_abc123'
@@ -153,6 +153,58 @@ class TestCheckoutSessionCreateCalledCorrectly(unittest.TestCase):
         self.assertEqual(call_kwargs['payment_method_collection'], 'if_required')
         self.assertEqual(call_kwargs['metadata']['accepted_terms'], 'true')
         self.assertEqual(call_kwargs['metadata']['accepted_privacy'], 'true')
+
+
+# ---------------------------------------------------------------------------
+# Password hashing helpers
+# ---------------------------------------------------------------------------
+class TestHashPassword(unittest.TestCase):
+
+    def test_returns_string(self):
+        self.assertIsInstance(_hash_password('secret'), str)
+
+    def test_bcrypt_prefix(self):
+        """Hash must start with a bcrypt identifier ($2b$)."""
+        self.assertTrue(_hash_password('secret').startswith('$2b$'))
+
+    def test_different_calls_produce_different_salts(self):
+        """Each call should produce a unique hash (random salt)."""
+        self.assertNotEqual(_hash_password('same'), _hash_password('same'))
+
+    def test_hash_is_not_plaintext(self):
+        pw = 'mysecretpassword'
+        self.assertNotEqual(_hash_password(pw), pw)
+
+
+class TestVerifyPassword(unittest.TestCase):
+
+    def test_correct_bcrypt_hash_returns_true(self):
+        pw = 'correct-horse-battery-staple'
+        stored = _hash_password(pw)
+        self.assertTrue(_verify_password(pw, stored))
+
+    def test_wrong_password_bcrypt_returns_false(self):
+        stored = _hash_password('correct')
+        self.assertFalse(_verify_password('wrong', stored))
+
+    def test_legacy_plaintext_correct_returns_true(self):
+        """Migration path: plain-text stored passwords still authenticate."""
+        self.assertTrue(_verify_password('mypassword', 'mypassword'))
+
+    def test_legacy_plaintext_wrong_returns_false(self):
+        self.assertFalse(_verify_password('wrong', 'mypassword'))
+
+    def test_legacy_plaintext_cannot_fool_bcrypt_check(self):
+        """A plain-text value that looks like a bcrypt hash is rejected properly."""
+        # A real bcrypt hash of 'x' – verify with 'y' must return False.
+        real_hash = _hash_password('x')
+        self.assertFalse(_verify_password('y', real_hash))
+
+    def test_bcrypt_hash_not_treated_as_plaintext(self):
+        """Verifying a bcrypt-hash string against itself (as password) must fail."""
+        stored = _hash_password('secret')
+        # The stored hash itself is not the password.
+        self.assertFalse(_verify_password(stored, stored))
 
 
 if __name__ == '__main__':

@@ -263,8 +263,16 @@ def show_login_form():
                                 
                                 # Check if user has set a password
                                 if user.get('password_set', False) and user.get('password_hash'):
-                                    # Verify password (for MVP, simple comparison - should hash in production!)
-                                    if password == user.get('password_hash'):
+                                    stored = user.get('password_hash', '')
+                                    if _verify_password(password, stored):
+                                        # Transparently upgrade legacy plain-text passwords to bcrypt on first login.
+                                        if not stored.startswith(('$2b$', '$2a$')):
+                                            try:
+                                                supabase.table('users').update(
+                                                    {'password_hash': _hash_password(password)}
+                                                ).eq('email', correct_email).execute()
+                                            except Exception:
+                                                pass  # Non-fatal; user is already authenticated
                                         if user.get('subscription_status') in ('active', 'trialing', 'trial'):
                                             st.session_state["password_correct"] = True
                                             st.session_state["user_email"] = correct_email  # Use correct case from DB
@@ -370,6 +378,28 @@ def _validate_legal_acceptance(agree_terms: bool, agree_privacy: bool):
     if not agree_privacy:
         return "Please accept the Privacy Policy to continue."
     return None
+
+
+def _hash_password(password: str) -> str:
+    """Hash a plaintext password with bcrypt. Returns the hash as a UTF-8 string."""
+    import bcrypt
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def _verify_password(password: str, stored_hash: str) -> bool:
+    """Verify *password* against *stored_hash*.
+
+    Handles two cases:
+    - bcrypt hash (starts with ``$2b$`` or ``$2a$``): compared with bcrypt.
+    - Legacy plain-text (migration path): direct string comparison so existing
+      users can still log in while their hash is upgraded on next login.
+    """
+    import bcrypt
+    if stored_hash.startswith(('$2b$', '$2a$')):
+        return bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8'))
+    # Legacy plain-text comparison – only reached until the user logs in and
+    # their hash is transparently re-hashed (see login handler below).
+    return password == stored_hash
 
 
 def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url: str) -> dict:
@@ -625,17 +655,17 @@ def show_password_reset_completion(reset_token: str):
                                         st.info("It appears your user account was deleted or not created properly.")
                                         return
                                     
-                                    # Update user's password
+                                    # Update user's password (bcrypt-hashed)
                                     supabase.table('users').update({
-                                        'password_hash': new_password,  # TODO: Hash this!
+                                        'password_hash': _hash_password(new_password),
                                         'password_set': True
                                     }).eq('email', email).execute()
-                                    
+
                                     # Mark token as used
                                     supabase.table('password_reset_tokens').update({
                                         'used': True
                                     }).eq('token', reset_token).execute()
-                                    
+
                                     st.success("✅ Password updated successfully! You can now login with your new password.")
                                     # Auto redirect after success
                                     st.query_params.clear()
@@ -728,9 +758,9 @@ def show_password_setup_form(setup_token: str):
                                         st.info("It appears your user account was not created properly during signup.")
                                         return
                                     
-                                    # Update user's password
+                                    # Update user's password (bcrypt-hashed)
                                     update_result = supabase.table('users').update({
-                                        'password_hash': new_password,  # TODO: Hash this!
+                                        'password_hash': _hash_password(new_password),
                                         'password_set': True
                                     }).eq('email', email).execute()
                                     

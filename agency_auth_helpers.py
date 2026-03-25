@@ -111,10 +111,11 @@ def create_agency_account(agency_name: str, owner_name: str, email: str, passwor
         # Create user record in Supabase Auth (if using Supabase Auth)
         # For now, we'll just create in users table
 
+        from auth_helpers import _hash_password
         # Insert into users table
         user_data = {
             'email': email.lower(),
-            'password_hash': password,  # TODO: Hash this in production!
+            'password_hash': _hash_password(password),
             'password_set': True,
             'full_name': owner_name,
             'is_active': True,

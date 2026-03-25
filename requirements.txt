@@ -1,5 +1,6 @@
 streamlit
 pandas
+bcrypt
 sqlalchemy
 pdfplumber==0.10.3
 Pillow
