@@ -427,7 +427,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         line_items=[{'price': price_id, 'quantity': 1}],
         mode='subscription',
         customer_email=email,
-        subscription_data={'trial_period_days': 14},
+        subscription_data={'trial_period_days': SUBSCRIPTION_OFFER['trial_days']},
         metadata={
             'accepted_terms': 'true',
             'accepted_privacy': 'true',

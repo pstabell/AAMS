@@ -87,11 +87,13 @@ class TestBuildCheckoutKwargs(unittest.TestCase):
             app_url=_APP_URL,
         )
 
-    # --- 2. 14-day free trial ---
-    def test_trial_period_days_is_14(self):
-        """subscription_data must include trial_period_days=14."""
+    # --- 2. free trial length driven by SUBSCRIPTION_OFFER config ---
+    def test_trial_period_days_matches_config(self):
+        """subscription_data['trial_period_days'] must equal SUBSCRIPTION_OFFER['trial_days']."""
+        from config import SUBSCRIPTION_OFFER
         self.assertEqual(
-            self.kwargs['subscription_data']['trial_period_days'], 14
+            self.kwargs['subscription_data']['trial_period_days'],
+            SUBSCRIPTION_OFFER['trial_days'],
         )
 
     def test_mode_is_subscription(self):
@@ -157,8 +159,9 @@ class TestCheckoutSessionCreateCalledCorrectly(unittest.TestCase):
         )
         mock_stripe.checkout.Session.create(**kwargs)
 
+        from config import SUBSCRIPTION_OFFER
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
-        self.assertEqual(call_kwargs['subscription_data']['trial_period_days'], 14)
+        self.assertEqual(call_kwargs['subscription_data']['trial_period_days'], SUBSCRIPTION_OFFER['trial_days'])
         self.assertEqual(call_kwargs['payment_method_collection'], 'if_required')
         self.assertEqual(call_kwargs['metadata']['accepted_terms'], 'true')
         self.assertEqual(call_kwargs['metadata']['accepted_privacy'], 'true')
@@ -525,9 +528,10 @@ class TestSubscriptionOfferConfig(unittest.TestCase):
             self.assertIsInstance(item, str)
             self.assertTrue(item.strip(), f"Empty feature entry: {item!r}")
 
-    def test_trial_days_matches_checkout_kwargs(self):
-        """trial_days in config must equal the hard-coded 14 in _build_checkout_kwargs."""
-        self.assertEqual(self.offer['trial_days'], 14)
+    def test_trial_days_is_positive_integer(self):
+        """trial_days must be a positive integer (checkout reads it directly from config)."""
+        self.assertIsInstance(self.offer['trial_days'], int)
+        self.assertGreater(self.offer['trial_days'], 0)
 
     def test_trial_price_monthly_contains_dollar_sign(self):
         self.assertIn('$', self.offer['trial_price_monthly'])
