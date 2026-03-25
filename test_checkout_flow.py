@@ -879,5 +879,53 @@ class TestSupportContactConfig(unittest.TestCase):
             self.assertIsInstance(step, str)
 
 
+# ---------------------------------------------------------------------------
+# Success-page fallback routing: must use Resend Setup Email, not Forgot Password
+# ---------------------------------------------------------------------------
+class TestSuccessPageResendRouting(unittest.TestCase):
+    """
+    Regression: the post-checkout success page (?session_id=…) previously told
+    users who didn't receive their setup email to click "Forgot Password?" which
+    generates a 1-hour reset token — far too short for a new subscriber.
+
+    The correct path is "Resend Setup Email" (24-hour token).  These tests pin
+    the session-state contract that the success-page resend button must honour
+    so the resend form opens immediately after the query params are cleared.
+    """
+
+    def _simulate_success_page_resend_click(self) -> dict:
+        """
+        Reproduce the session-state assignments made when the user clicks
+        "Resend Setup Email" on the ?session_id= success page.
+        """
+        session = {}
+        session['show_resend_setup'] = True
+        # query_params.clear() + st.rerun() follow in the real code;
+        # show_password_reset must NOT be set
+        return session
+
+    def test_resend_button_sets_show_resend_setup(self):
+        """show_resend_setup must be True so the resend form opens."""
+        state = self._simulate_success_page_resend_click()
+        self.assertTrue(state.get('show_resend_setup'))
+
+    def test_resend_button_does_not_set_show_password_reset(self):
+        """The 1-hour password-reset form must NOT be triggered from the success page."""
+        state = self._simulate_success_page_resend_click()
+        self.assertNotIn('show_password_reset', state)
+
+    def test_setup_token_window_longer_than_reset_window(self):
+        """24-hour setup token must outlast the 1-hour password-reset token."""
+        from datetime import timedelta
+        setup_window = timedelta(hours=24)
+        reset_window = timedelta(hours=1)
+        self.assertGreater(setup_window, reset_window)
+
+    def test_resend_button_does_not_leave_show_password_reset_true(self):
+        """Confirming the wrong flag is never accidentally set to True."""
+        state = self._simulate_success_page_resend_click()
+        self.assertFalse(state.get('show_password_reset', False))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

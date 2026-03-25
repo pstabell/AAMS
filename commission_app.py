@@ -6805,14 +6805,13 @@ def main():
         st.warning("⚠️ **Important:** Check your email (including SPAM folder) for a secure link to set your password.")
         
         # Add email recovery message
-        st.info("""
-        📧 **Didn't receive the email?** No problem! You can set your password using the "Forgot Password?" option:
-        1. Click the button below to go to login
-        2. Click "Forgot Password?"
-        3. Enter your email address
-        4. Check your email for the reset link
-        """)
-        
+        st.info(
+            "📧 **Didn't receive the email?** Click **Resend Setup Email** below — "
+            "we'll send a fresh 24-hour link to your inbox.\n\n"
+            "*(Do not use \"Forgot Password?\" — that flow is for existing users "
+            "and only gives a 1-hour link.)*"
+        )
+
         # Add email reminder
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -6824,10 +6823,17 @@ def main():
             4. Click the "Set Your Password" button in the email
             5. Create your password and you'll be logged in automatically
             """)
-        
-        if st.button("Continue to Login", type="primary"):
-            st.query_params.clear()
-            st.rerun()
+
+        col_a, col_b = st.columns([1, 1])
+        with col_a:
+            if st.button("Continue to Login", type="primary"):
+                st.query_params.clear()
+                st.rerun()
+        with col_b:
+            if st.button("📧 Resend Setup Email"):
+                st.session_state['show_resend_setup'] = True
+                st.query_params.clear()
+                st.rerun()
         st.stop()
     
     # Check for subscribe parameter to auto-switch to Subscribe tab
