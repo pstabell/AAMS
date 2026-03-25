@@ -425,6 +425,28 @@ def _verify_password(password: str, stored_hash: str) -> bool:
     return password == stored_hash
 
 
+def _should_block_checkout(existing_status):
+    """Return (should_block, reason) when an email is already in the users table.
+
+    Prevents a second Stripe subscription being created for the same address.
+
+    Args:
+        existing_status: subscription_status value from the users table, or
+                         None / '' when the email is not yet registered.
+
+    Returns:
+        (True, 'already_active') — active/trialing/trial: direct to Login tab.
+        (True, 'past_due')       — past_due: direct to update payment method.
+        (False, '')              — cancelled/inactive/None: checkout proceeds.
+    """
+    if existing_status in ('active', 'trialing', 'trial'):
+        return True, 'already_active'
+    if existing_status == 'past_due':
+        return True, 'past_due'
+    # cancelled, inactive, empty, or None → allow new checkout
+    return False, ''
+
+
 def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url: str) -> dict:
     """Return kwargs for stripe.checkout.Session.create (pure, no side-effects)."""
     return dict(
@@ -500,23 +522,60 @@ def show_subscribe_tab():
                     elif not email:
                         st.error("Please enter your email address to subscribe.")
                     else:
+                        # Guard: check whether this email already has a subscription
+                        # before hitting the Stripe API, to prevent duplicate subscriptions.
+                        _existing_status = None
                         try:
-                            accepted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-                            app_url = os.getenv("RENDER_APP_URL", "https://commission-tracker-app.onrender.com")
-                            kwargs = _build_checkout_kwargs(
-                                email=email,
-                                accepted_at=accepted_at,
-                                price_id=os.getenv("STRIPE_PRICE_ID"),
-                                app_url=app_url,
-                            )
-                            checkout_session = stripe.checkout.Session.create(**kwargs)
-                            st.markdown(f'<meta http-equiv="refresh" content="0; url={checkout_session.url}">',
-                                       unsafe_allow_html=True)
-                            st.success("Redirecting to secure checkout...")
-                            st.balloons()
-                        except Exception as e:
-                            st.error(f"Error creating checkout session: {e}")
-                            st.caption("Please check your internet connection and try again.")
+                            from supabase import create_client as _sb_create
+                            _sb_url = os.getenv("PRODUCTION_SUPABASE_URL", os.getenv("SUPABASE_URL"))
+                            _sb_key = os.getenv("PRODUCTION_SUPABASE_ANON_KEY", os.getenv("SUPABASE_ANON_KEY"))
+                            if _sb_url and _sb_key:
+                                _sb = _sb_create(_sb_url, _sb_key)
+                                _res = _sb.table('users').select('subscription_status').ilike('email', email).execute()
+                                if _res.data:
+                                    _existing_status = _res.data[0].get('subscription_status')
+                        except Exception:
+                            pass  # Non-fatal: if DB is unreachable, let Stripe handle it
+
+                        _block, _reason = _should_block_checkout(_existing_status)
+                        if _block:
+                            if _reason == 'already_active':
+                                st.warning(
+                                    "📋 An active account already exists for this email. "
+                                    "Please use the **Login** tab to sign in."
+                                )
+                                st.info(
+                                    "Forgot your password? Click **Forgot Password?** on the Login tab "
+                                    "and we'll send you a reset link."
+                                )
+                            elif _reason == 'past_due':
+                                st.error(
+                                    "⚠️ This email has a past-due payment. "
+                                    "Please log in and update your payment method."
+                                )
+                                st.info(
+                                    "Use the **Login** tab, then visit your account settings "
+                                    "to resolve the outstanding payment."
+                                )
+                        else:
+                            # ---- proceed to Stripe checkout ----
+                            try:
+                                accepted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                                app_url = os.getenv("RENDER_APP_URL", "https://commission-tracker-app.onrender.com")
+                                kwargs = _build_checkout_kwargs(
+                                    email=email,
+                                    accepted_at=accepted_at,
+                                    price_id=os.getenv("STRIPE_PRICE_ID"),
+                                    app_url=app_url,
+                                )
+                                checkout_session = stripe.checkout.Session.create(**kwargs)
+                                st.markdown(f'<meta http-equiv="refresh" content="0; url={checkout_session.url}">',
+                                           unsafe_allow_html=True)
+                                st.success("Redirecting to secure checkout...")
+                                st.balloons()
+                            except Exception as e:
+                                st.error(f"Error creating checkout session: {e}")
+                                st.caption("Please check your internet connection and try again.")
 
 def generate_reset_token(length=32):
     """Generate a secure random token for password reset."""

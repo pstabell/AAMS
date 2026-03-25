@@ -34,6 +34,7 @@ from auth_helpers import (  # noqa: E402
     generate_setup_token,
     _subscription_allows_login,
     _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN,
+    _should_block_checkout,
 )
 
 _FIXED_AT = '2026-03-24T12:00:00Z'
@@ -597,6 +598,109 @@ class TestAgencySignupFeatureFlag(unittest.TestCase):
     def test_is_feature_enabled_unknown_key_returns_false(self):
         """Unknown feature keys must not raise; they return False."""
         self.assertFalse(self.is_feature_enabled('nonexistent_feature_xyz'))
+
+
+# ---------------------------------------------------------------------------
+# Duplicate-subscriber guard: _should_block_checkout
+# ---------------------------------------------------------------------------
+class TestShouldBlockCheckout(unittest.TestCase):
+    """
+    Pin the duplicate-subscriber guard so checkout can never create a second
+    Stripe subscription on top of an already-active account.
+
+    Rules
+    -----
+    - active / trialing / trial  → block with reason 'already_active'
+    - past_due                   → block with reason 'past_due'
+    - cancelled / inactive / ''  → allow checkout (reason is '')
+    - None (email not found)     → allow checkout
+    """
+
+    # --- statuses that MUST block ---
+
+    def test_active_is_blocked(self):
+        block, reason = _should_block_checkout('active')
+        self.assertTrue(block)
+        self.assertEqual(reason, 'already_active')
+
+    def test_trialing_is_blocked(self):
+        block, reason = _should_block_checkout('trialing')
+        self.assertTrue(block)
+        self.assertEqual(reason, 'already_active')
+
+    def test_trial_is_blocked(self):
+        """Agency-style 'trial' status must also be blocked."""
+        block, reason = _should_block_checkout('trial')
+        self.assertTrue(block)
+        self.assertEqual(reason, 'already_active')
+
+    def test_past_due_is_blocked(self):
+        block, reason = _should_block_checkout('past_due')
+        self.assertTrue(block)
+        self.assertEqual(reason, 'past_due')
+
+    def test_past_due_reason_is_not_already_active(self):
+        """past_due gets its own reason so the UI can show a tailored message."""
+        _, reason = _should_block_checkout('past_due')
+        self.assertNotEqual(reason, 'already_active')
+
+    # --- statuses that MUST allow checkout ---
+
+    def test_cancelled_allows_checkout(self):
+        block, _ = _should_block_checkout('cancelled')
+        self.assertFalse(block)
+
+    def test_inactive_allows_checkout(self):
+        block, _ = _should_block_checkout('inactive')
+        self.assertFalse(block)
+
+    def test_none_allows_checkout(self):
+        """Email not found in DB (None status) must allow checkout."""
+        block, _ = _should_block_checkout(None)
+        self.assertFalse(block)
+
+    def test_empty_string_allows_checkout(self):
+        """Empty string status must allow checkout (treat as unregistered)."""
+        block, _ = _should_block_checkout('')
+        self.assertFalse(block)
+
+    def test_unknown_status_allows_checkout(self):
+        """Unrecognised statuses default to allow (never silently block a signup)."""
+        block, _ = _should_block_checkout('some_future_status')
+        self.assertFalse(block)
+
+    # --- return-type contracts ---
+
+    def test_returns_tuple_of_two(self):
+        result = _should_block_checkout('active')
+        self.assertIsInstance(result, tuple)
+        self.assertEqual(len(result), 2)
+
+    def test_first_element_is_bool(self):
+        block, _ = _should_block_checkout('active')
+        self.assertIsInstance(block, bool)
+
+    def test_reason_is_string(self):
+        _, reason = _should_block_checkout('active')
+        self.assertIsInstance(reason, str)
+
+    def test_allowed_reason_is_empty_string(self):
+        """When checkout is allowed the reason field must be an empty string."""
+        _, reason = _should_block_checkout('cancelled')
+        self.assertEqual(reason, '')
+
+    # --- consistency with _subscription_allows_login ---
+
+    def test_every_login_allowed_status_also_blocks_checkout(self):
+        """Any status that lets a user *log in* must also block a new checkout.
+        If a user can already access the app, they don't need a second trial.
+        """
+        for status in _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN:
+            block, _ = _should_block_checkout(status)
+            self.assertTrue(
+                block,
+                msg=f"status '{status}' allows login but did not block checkout",
+            )
 
 
 if __name__ == '__main__':
