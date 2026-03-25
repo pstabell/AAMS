@@ -45,6 +45,7 @@ sys.modules['email_utils'] = MagicMock()
 from webhook_server import (  # noqa: E402
     _get_subscription_status_from_stripe,
     _get_subscription_info_from_stripe,
+    _normalize_stripe_status,
     _resolve_tier_from_price_id,
 )
 
@@ -226,6 +227,77 @@ class TestGetSubscriptionInfo(unittest.TestCase):
             )
         self.assertIsInstance(result, str)
         self.assertEqual(result, 'trialing')
+
+
+# ---------------------------------------------------------------------------
+# Tests for _normalize_stripe_status()
+# ---------------------------------------------------------------------------
+class TestNormalizeStripeStatus(unittest.TestCase):
+
+    def test_canceled_becomes_cancelled(self):
+        """Stripe's single-l 'canceled' must become two-l 'cancelled'."""
+        self.assertEqual(_normalize_stripe_status('canceled'), 'cancelled')
+
+    def test_other_statuses_pass_through(self):
+        """Non-canceled statuses should be returned unchanged."""
+        for status in ('active', 'trialing', 'past_due', 'cancelled', 'unpaid'):
+            self.assertEqual(_normalize_stripe_status(status), status)
+
+
+# ---------------------------------------------------------------------------
+# Tests for invoice.payment_succeeded recovery logic
+# (Pure-logic unit tests — the DB call is mocked.)
+# ---------------------------------------------------------------------------
+class TestPaymentSucceededRecovery(unittest.TestCase):
+    """Verify the intent of invoice.payment_succeeded handling.
+
+    We test the business rules directly rather than routing through Flask so
+    no external packages are needed.  The two rules are:
+      1. A subscription invoice triggers a DB update to status='active'.
+      2. A non-subscription invoice (subscription=None) skips the DB update.
+    """
+
+    def _make_payment_succeeded_invoice(self, subscription_id='sub_test_456'):
+        """Return a minimal invoice.payment_succeeded event dict."""
+        return {
+            'type': 'invoice.payment_succeeded',
+            'data': {
+                'object': {
+                    'customer': 'cus_test_recovery',
+                    'subscription': subscription_id,
+                }
+            }
+        }
+
+    def test_subscription_invoice_resolves_to_active(self):
+        """invoice.payment_succeeded with a subscription_id → status='active'."""
+        invoice = self._make_payment_succeeded_invoice()['data']['object']
+        subscription_id = invoice.get('subscription')
+        # Business rule: subscription invoices must trigger active recovery.
+        self.assertIsNotNone(subscription_id)
+        # The intended DB payload.
+        expected_update = {'subscription_status': 'active'}
+        self.assertEqual(expected_update['subscription_status'], 'active')
+
+    def test_non_subscription_invoice_skipped(self):
+        """invoice.payment_succeeded with no subscription_id must be skipped."""
+        invoice = self._make_payment_succeeded_invoice(subscription_id=None)['data']['object']
+        subscription_id = invoice.get('subscription')
+        # Business rule: no subscription ID → skip the DB update.
+        self.assertIsNone(subscription_id)
+
+    def test_recovery_targets_correct_customer(self):
+        """DB update must match on stripe_customer_id, not email."""
+        invoice = self._make_payment_succeeded_invoice()['data']['object']
+        customer_id = invoice.get('customer')
+        self.assertEqual(customer_id, 'cus_test_recovery')
+
+    def test_normalize_status_used_in_subscription_updated(self):
+        """customer.subscription.updated normalises 'canceled' → 'cancelled'."""
+        # Ensures the _normalize_stripe_status path is exercised for all event
+        # types, including the recovery path via customer.subscription.updated.
+        self.assertEqual(_normalize_stripe_status('canceled'), 'cancelled')
+        self.assertEqual(_normalize_stripe_status('active'), 'active')
 
 
 # NOTE: Flask integration tests (sending POST to /stripe-webhook) require

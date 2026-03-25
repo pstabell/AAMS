@@ -380,6 +380,33 @@ def stripe_webhook():
                 print(f"Marked customer {customer_id} as past_due")
             except Exception as e:
                 print(f"Database error updating past_due status: {e}")
+
+    # Handle payment succeeded — recover past_due users to active
+    elif event['type'] == 'invoice.payment_succeeded':
+        invoice = event['data']['object']
+        customer_id = invoice.get('customer')
+        subscription_id = invoice.get('subscription')
+
+        # Only act on subscription invoices (not one-off invoices).
+        if not subscription_id:
+            print(f"invoice.payment_succeeded for non-subscription invoice; skipping DB update")
+        else:
+            print(f"Payment succeeded: Customer {customer_id}, Subscription {subscription_id}")
+
+            # Restore subscription to active.  Stripe also fires
+            # customer.subscription.updated with status='active', but handling it
+            # here as well is the explicit complement to invoice.payment_failed and
+            # ensures past_due users are unblocked even if that event is delayed.
+            supabase = get_supabase_client()
+            if supabase and customer_id:
+                try:
+                    supabase.table('users').update({
+                        'subscription_status': 'active',
+                        'subscription_updated_at': datetime.now().isoformat()
+                    }).eq('stripe_customer_id', customer_id).execute()
+                    print(f"Restored customer {customer_id} to active after successful payment")
+                except Exception as e:
+                    print(f"Database error restoring active status: {e}")
     
     # Add additional info for checkout events
     if event['type'] == 'checkout.session.completed':
