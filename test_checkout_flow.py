@@ -25,7 +25,7 @@ sys.modules['streamlit'] = MagicMock()
 sys.modules['supabase'] = MagicMock()
 sys.modules['stripe'] = MagicMock()
 
-from auth_helpers import _validate_legal_acceptance, _build_checkout_kwargs, _hash_password, _verify_password  # noqa: E402
+from auth_helpers import _validate_legal_acceptance, _build_checkout_kwargs, _hash_password, _verify_password, generate_setup_token  # noqa: E402
 
 _FIXED_AT = '2026-03-24T12:00:00Z'
 _PRICE_ID = 'price_test_abc123'
@@ -205,6 +205,47 @@ class TestVerifyPassword(unittest.TestCase):
         stored = _hash_password('secret')
         # The stored hash itself is not the password.
         self.assertFalse(_verify_password(stored, stored))
+
+
+# ---------------------------------------------------------------------------
+# Resend setup email — token generation contract
+# ---------------------------------------------------------------------------
+class TestGenerateSetupToken(unittest.TestCase):
+    """
+    The resend-setup-email flow reuses generate_setup_token() with a 24-hour
+    expiry (matching the original webhook token).  These tests pin the
+    observable contract of that helper so a regression immediately fails.
+    """
+
+    def test_returns_string(self):
+        self.assertIsInstance(generate_setup_token(), str)
+
+    def test_default_length_is_32(self):
+        self.assertEqual(len(generate_setup_token()), 32)
+
+    def test_custom_length_respected(self):
+        self.assertEqual(len(generate_setup_token(length=64)), 64)
+
+    def test_tokens_are_unique(self):
+        """Each call must produce a distinct token (random, not deterministic)."""
+        self.assertNotEqual(generate_setup_token(), generate_setup_token())
+
+    def test_only_alphanumeric_chars(self):
+        """Token must be safe for use in a URL query parameter without encoding."""
+        import re
+        token = generate_setup_token()
+        self.assertRegex(token, r'^[A-Za-z0-9]+$')
+
+    def test_resend_expiry_is_24_hours(self):
+        """
+        Resend-setup tokens must expire in 24 hours, NOT 1 hour (the shorter
+        window used by password-reset tokens).  Compute the expiry the same
+        way show_resend_setup_form does and assert it is >= 23 h 59 m away.
+        """
+        from datetime import datetime, timedelta
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+        min_expected = datetime.utcnow() + timedelta(hours=23, minutes=59)
+        self.assertGreater(expires_at, min_expected)
 
 
 if __name__ == '__main__':

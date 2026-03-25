@@ -186,8 +186,10 @@ def show_production_login_with_auth():
         st.write("")  # Another empty line to bring text down more
         st.markdown("# Agent Commission Tracker")
     
-    # Check if we should show password reset form
-    if st.session_state.get('show_password_reset'):
+    # Check if we should show password reset / resend-setup forms
+    if st.session_state.get('show_resend_setup'):
+        show_resend_setup_form()
+    elif st.session_state.get('show_password_reset'):
         show_password_reset_form()
     else:
         # Check if we should show Subscribe tab directly (no tabs)
@@ -301,9 +303,12 @@ def show_login_form():
                                     else:
                                         st.error("Incorrect password. Please try again.")
                                 else:
-                                    # User hasn't set password yet
+                                    # User hasn't set password yet — route to dedicated resend setup flow
                                     st.error("Please set your password first. Check your email for the setup link.")
-                                    st.info("If you haven't received it, use the 'Forgot Password?' button below.")
+                                    st.info("Didn't receive it or the link expired? Click **Resend Setup Email** below.")
+                                    st.session_state['show_resend_setup'] = True
+                                    st.session_state['resend_setup_target_email'] = email.lower()
+                                    st.rerun()
                             else:
                                 st.error("Email not found. Please check your email address and try again.")
                                 st.info("💡 **Tip**: Make sure you're using the same email address you used during signup. If you're still having trouble, use the 'Forgot Password?' button below.")
@@ -595,6 +600,82 @@ def show_password_reset_form():
         if st.button("← Back to Login", key="back_to_login"):
             del st.session_state['show_password_reset']
             st.rerun()
+
+def show_resend_setup_form():
+    """Allow new subscribers who never received (or whose link expired) to get a fresh setup email."""
+    st.subheader("📧 Resend Setup Email")
+    st.write("Enter your email address and we'll resend your password setup link.")
+
+    col1, col2 = st.columns([2, 3])
+    with col1:
+        with st.form("resend_setup_form"):
+            email = st.text_input(
+                "Email Address",
+                key="resend_setup_email",
+                value=st.session_state.get("resend_setup_target_email", ""),
+            )
+            submit = st.form_submit_button("Resend Setup Email", type="primary", use_container_width=True)
+
+            if submit:
+                if not email:
+                    st.error("Please enter your email address.")
+                else:
+                    from supabase import create_client
+                    url = os.getenv("PRODUCTION_SUPABASE_URL", os.getenv("SUPABASE_URL"))
+                    key = os.getenv("PRODUCTION_SUPABASE_ANON_KEY", os.getenv("SUPABASE_ANON_KEY"))
+
+                    if not url or not key:
+                        st.error("Database not configured.")
+                    else:
+                        supabase = create_client(url, key)
+                        try:
+                            result = supabase.table('users').select('email, password_set').ilike('email', email).execute()
+                            if result.data:
+                                user = result.data[0]
+                                if user.get('password_set', False):
+                                    # Already set up — redirect to normal flows
+                                    st.info("Your account is already set up. Use the **Login** tab, or **Forgot Password?** if you need a reset.")
+                                else:
+                                    # Generate fresh 24-hour setup token (mirrors webhook_server.py logic)
+                                    from datetime import timedelta
+                                    setup_token = generate_setup_token()
+                                    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+                                    token_data = {
+                                        'email': user['email'],
+                                        'token': setup_token,
+                                        'expires_at': expires_at,
+                                        'used': False,
+                                    }
+                                    supabase.table('password_reset_tokens').insert(token_data).execute()
+
+                                    app_url = os.getenv("RENDER_APP_URL", "https://commission-tracker-app.onrender.com")
+                                    setup_link = f"{app_url}?setup_token={setup_token}"
+
+                                    try:
+                                        from email_utils import send_password_setup_email
+                                        email_sent = send_password_setup_email(user['email'], setup_link)
+                                        if email_sent:
+                                            st.success("✅ Setup email resent! Check your inbox (and spam folder).")
+                                            st.info("The link is valid for 24 hours.")
+                                        else:
+                                            st.warning("Email service unavailable. Use this link to set up your password:")
+                                            st.code(setup_link)
+                                            st.caption("This link expires in 24 hours.")
+                                    except Exception:
+                                        st.warning("Could not send email. Use this link to set up your password:")
+                                        st.code(setup_link)
+                                        st.caption("This link expires in 24 hours.")
+                            else:
+                                # Don't confirm whether email exists (security best practice)
+                                st.success("✅ If that email is registered and awaiting setup, you'll receive a link shortly.")
+                        except Exception as e:
+                            st.error(f"Database error: {e}")
+
+        if st.button("← Back to Login", key="back_from_resend_setup"):
+            st.session_state.pop('show_resend_setup', None)
+            st.session_state.pop('resend_setup_target_email', None)
+            st.rerun()
+
 
 def show_password_reset_completion(reset_token: str):
     """Show form to complete password reset."""
