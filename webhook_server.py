@@ -39,6 +39,34 @@ def health_check():
     """Health check endpoint for Render."""
     return jsonify({'status': 'healthy', 'version': '1.1'}), 200
 
+def _get_subscription_status_from_stripe(subscription_id, session):
+    """Return the real Stripe subscription status instead of assuming 'active'.
+
+    For 14-day trial sign-ups the Stripe subscription status is 'trialing', not
+    'active'.  This function fetches the subscription object when possible so the
+    DB accurately reflects the Stripe state.  Falls back to a heuristic (payment
+    not required ⟹ trialing) and ultimately to 'active' if Stripe is unreachable.
+    """
+    if subscription_id and stripe.api_key:
+        try:
+            sub = stripe.Subscription.retrieve(subscription_id)
+            stripe_status = sub.get('status', 'active')
+            # Pass through any valid Stripe status; normalise 'canceled' (Stripe
+            # spelling) to 'cancelled' (our DB spelling) for consistency.
+            if stripe_status == 'canceled':
+                return 'cancelled'
+            known = {'active', 'trialing', 'past_due', 'cancelled', 'unpaid', 'incomplete'}
+            return stripe_status if stripe_status in known else 'active'
+        except Exception as e:
+            print(f"Warning: could not retrieve Stripe subscription status: {e}")
+
+    # Heuristic fallback: if Stripe required no payment the session is a trial.
+    if session.get('payment_status') == 'no_payment_required':
+        return 'trialing'
+
+    return 'active'
+
+
 @app.route('/stripe-webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events."""
@@ -105,37 +133,62 @@ def stripe_webhook():
             app.logger.error(f"Error processing session: {e}")
             return jsonify({'error': str(e)}), 500
         
+        # Determine the real subscription status from Stripe (e.g. 'trialing' for
+        # 14-day trial sign-ups) rather than blindly hardcoding 'active'.
+        actual_status = _get_subscription_status_from_stripe(subscription_id, session)
+        print(f"Resolved subscription status: {actual_status}")
+
+        # Extract and log legal-acceptance metadata captured at checkout.
+        # Stored in Stripe metadata; logged here for server-side audit trail.
+        # No new DB columns are needed — the data is always retrievable from
+        # Stripe via subscription_id if a compliance audit is required.
+        checkout_metadata = session.get('metadata') or {}
+        if checkout_metadata.get('accepted_terms') == 'true':
+            print(
+                f"Legal acceptance recorded — email: {customer_email}, "
+                f"accepted_at: {checkout_metadata.get('accepted_at', 'unknown')}, "
+                f"terms_version: {checkout_metadata.get('terms_version', 'unknown')}, "
+                f"privacy_version: {checkout_metadata.get('privacy_version', 'unknown')}"
+            )
+        debug_info['legal_acceptance'] = {
+            'accepted_terms': checkout_metadata.get('accepted_terms'),
+            'accepted_privacy': checkout_metadata.get('accepted_privacy'),
+            'accepted_at': checkout_metadata.get('accepted_at'),
+        }
+
         # Update database (if Supabase is configured)
         supabase = get_supabase_client()
         print(f"Supabase client: {'Connected' if supabase else 'Not connected'}")
-        
+
         # Track database operations in response
         db_result = {'attempted': False, 'success': False, 'error': None}
-        
+
         if supabase and customer_email:
             db_result['attempted'] = True
             try:
                 # Check if user exists
                 print(f"Checking if user exists: {customer_email}")
                 result = supabase.table('users').select("*").eq('email', customer_email).execute()
-                
+
                 if result.data:
                     # Update existing user
                     print(f"User exists, updating...")
                     update_data = {
                         'stripe_customer_id': stripe_customer_id,
                         'subscription_id': subscription_id,
-                        'subscription_status': 'active',
+                        'subscription_status': actual_status,
                         'subscription_tier': 'legacy',  # All current users are legacy
                         'subscription_updated_at': datetime.now().isoformat()
                     }
                     update_result = supabase.table('users').update(update_data).eq('email', customer_email).execute()
-                    print(f"Updated user: {customer_email}")
+                    print(f"Updated user: {customer_email} with status={actual_status}")
                     db_result['success'] = True
                     db_result['action'] = 'updated'
-                    
-                    # Check if this is a reactivation (was cancelled before)
-                    if result.data[0].get('subscription_status') != 'active':
+                    db_result['subscription_status'] = actual_status
+
+                    # Check if this is a reactivation (was cancelled/inactive before)
+                    prev_status = result.data[0].get('subscription_status')
+                    if prev_status not in ('active', 'trialing', 'trial'):
                         # Send welcome back email
                         try:
                             print(f"Sending welcome back email to {customer_email}")
@@ -146,12 +199,12 @@ def stripe_webhook():
                             print(f"Error sending welcome back email: {e}")
                 else:
                     # Create new user
-                    print(f"Creating new user...")
+                    print(f"Creating new user with status={actual_status}...")
                     user_data = {
                         'email': customer_email.lower() if customer_email else '',  # Store lowercase
                         'stripe_customer_id': stripe_customer_id,
                         'subscription_id': subscription_id,
-                        'subscription_status': 'active',
+                        'subscription_status': actual_status,
                         'subscription_tier': 'legacy',  # All current users are legacy
                         'created_at': datetime.now().isoformat()
                     }
@@ -160,7 +213,8 @@ def stripe_webhook():
                     print(f"Insert result: {insert_result}")
                     db_result['success'] = True
                     db_result['action'] = 'created'
-                    
+                    db_result['subscription_status'] = actual_status
+
                     # Generate setup token for password creation
                     from auth_helpers import generate_setup_token
                     setup_token = generate_setup_token()
