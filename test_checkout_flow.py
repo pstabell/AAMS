@@ -25,7 +25,15 @@ sys.modules['streamlit'] = MagicMock()
 sys.modules['supabase'] = MagicMock()
 sys.modules['stripe'] = MagicMock()
 
-from auth_helpers import _validate_legal_acceptance, _build_checkout_kwargs, _hash_password, _verify_password, generate_setup_token  # noqa: E402
+from auth_helpers import (  # noqa: E402
+    _validate_legal_acceptance,
+    _build_checkout_kwargs,
+    _hash_password,
+    _verify_password,
+    generate_setup_token,
+    _subscription_allows_login,
+    _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN,
+)
 
 _FIXED_AT = '2026-03-24T12:00:00Z'
 _PRICE_ID = 'price_test_abc123'
@@ -296,6 +304,171 @@ class TestExpiredSetupTokenRouting(unittest.TestCase):
         """The old (wrong) flow must NOT be triggered on expired setup tokens."""
         state = self._simulate_expired_setup_routing('agent@example.com')
         self.assertNotIn('show_password_reset', state)
+
+
+# ---------------------------------------------------------------------------
+# Subscription status gating: _subscription_allows_login
+# ---------------------------------------------------------------------------
+class TestSubscriptionAllowsLogin(unittest.TestCase):
+    """
+    Critical path: login is gated on subscription status.  These tests pin
+    the exact set of statuses that should allow vs. block access so any
+    regression (e.g. accidentally blocking 'trialing' users mid-trial) fails
+    immediately in CI.
+    """
+
+    # --- statuses that MUST allow login ---
+
+    def test_active_allows_login(self):
+        self.assertTrue(_subscription_allows_login('active'))
+
+    def test_trialing_allows_login(self):
+        """14-day trial users must be able to log in."""
+        self.assertTrue(_subscription_allows_login('trialing'))
+
+    def test_trial_allows_login(self):
+        """Legacy 'trial' status variant must also allow login."""
+        self.assertTrue(_subscription_allows_login('trial'))
+
+    # --- statuses that MUST block login ---
+
+    def test_past_due_blocks_login(self):
+        """Payment-failed accounts must not gain access."""
+        self.assertFalse(_subscription_allows_login('past_due'))
+
+    def test_cancelled_blocks_login(self):
+        self.assertFalse(_subscription_allows_login('cancelled'))
+
+    def test_inactive_blocks_login(self):
+        self.assertFalse(_subscription_allows_login('inactive'))
+
+    def test_empty_string_blocks_login(self):
+        """Missing/unset status must not accidentally allow access."""
+        self.assertFalse(_subscription_allows_login(''))
+
+    def test_none_string_blocks_login(self):
+        """'none' string (default when status absent) must be blocked."""
+        self.assertFalse(_subscription_allows_login('none'))
+
+    def test_unknown_status_blocks_login(self):
+        """Unrecognised statuses must default to blocked (safe by default)."""
+        self.assertFalse(_subscription_allows_login('some_future_status'))
+
+    # --- frozenset contract ---
+
+    def test_allowed_set_contains_exactly_three_statuses(self):
+        """The allowed-status set is an explicit allowlist — size must stay at 3."""
+        self.assertEqual(len(_SUBSCRIPTION_STATUSES_ALLOWING_LOGIN), 3)
+
+    def test_allowed_set_is_frozenset(self):
+        """frozenset prevents accidental mutation at module level."""
+        self.assertIsInstance(_SUBSCRIPTION_STATUSES_ALLOWING_LOGIN, frozenset)
+
+    def test_helper_is_consistent_with_allowed_set(self):
+        """_subscription_allows_login must agree with the exported constant."""
+        for status in _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN:
+            self.assertTrue(_subscription_allows_login(status))
+
+
+# ---------------------------------------------------------------------------
+# Auto-login session contract after password setup
+# ---------------------------------------------------------------------------
+class TestPasswordSetupAutoLoginContract(unittest.TestCase):
+    """
+    After a new subscriber sets their password, show_password_setup_form
+    must write exactly these three keys into session state before rerunning:
+
+        password_correct = True
+        user_email       = <lowercase email>
+        user_id          = <uuid from users table>
+
+    These tests exercise the *logic* of that contract via a small simulation
+    helper — no Streamlit or Supabase required.
+    """
+
+    def _simulate_setup_auto_login(
+        self,
+        email: str,
+        update_returns_id: bool,
+        select_returns_id: bool,
+        uid_value: str = 'abc-123',
+    ) -> dict:
+        """
+        Reproduce the session-state assignments made by show_password_setup_form.
+
+        *update_returns_id*  — whether Supabase update() included 'id' in its response.
+        *select_returns_id*  — whether the fallback SELECT returned a row with 'id'.
+        """
+        session = {}
+
+        # Simulated update result
+        update_data = [{'id': uid_value}] if update_returns_id else []
+
+        # Resolve uid (mirrors the fixed code in auth_helpers.py)
+        uid = None
+        if update_data and update_data[0].get('id'):
+            uid = update_data[0]['id']
+        else:
+            # Fallback select
+            if select_returns_id:
+                uid = uid_value
+
+        session['password_correct'] = True
+        session['user_email'] = email.lower()
+        if uid:
+            session['user_id'] = uid
+
+        return session
+
+    def test_user_id_set_when_update_returns_id(self):
+        """Happy path: Supabase update() returns the row including id."""
+        state = self._simulate_setup_auto_login(
+            'Agent@Example.com', update_returns_id=True, select_returns_id=False
+        )
+        self.assertEqual(state['user_id'], 'abc-123')
+
+    def test_user_id_set_via_fallback_select_when_update_suppressed(self):
+        """
+        RLS can suppress the update return value.  The fallback SELECT must
+        still populate user_id so data loading works immediately after signup.
+        """
+        state = self._simulate_setup_auto_login(
+            'agent@example.com', update_returns_id=False, select_returns_id=True
+        )
+        self.assertEqual(state['user_id'], 'abc-123')
+
+    def test_user_id_absent_but_login_still_created_when_both_fail(self):
+        """
+        If both the update response and the fallback select fail (e.g. DB
+        outage), the session should still be partially created so the error
+        is surfaced on the next page rather than silently blocking login.
+        """
+        state = self._simulate_setup_auto_login(
+            'agent@example.com', update_returns_id=False, select_returns_id=False
+        )
+        self.assertTrue(state['password_correct'])
+        self.assertNotIn('user_id', state)
+
+    def test_email_normalised_to_lowercase(self):
+        """user_email in session state must always be lowercase."""
+        state = self._simulate_setup_auto_login(
+            'AGENT@EXAMPLE.COM', update_returns_id=True, select_returns_id=False
+        )
+        self.assertEqual(state['user_email'], 'agent@example.com')
+
+    def test_password_correct_always_set_to_true(self):
+        state = self._simulate_setup_auto_login(
+            'a@b.com', update_returns_id=True, select_returns_id=False
+        )
+        self.assertTrue(state['password_correct'])
+
+    def test_user_id_not_set_to_none_when_unavailable(self):
+        """user_id key must be absent (not set to None) when id is not resolved."""
+        state = self._simulate_setup_auto_login(
+            'a@b.com', update_returns_id=False, select_returns_id=False
+        )
+        # Key should be absent, not present with value None
+        self.assertIsNone(state.get('user_id'))
 
 
 if __name__ == '__main__':

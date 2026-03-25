@@ -275,7 +275,7 @@ def show_login_form():
                                                 ).eq('email', correct_email).execute()
                                             except Exception:
                                                 pass  # Non-fatal; user is already authenticated
-                                        if user.get('subscription_status') in ('active', 'trialing', 'trial'):
+                                        if _subscription_allows_login(user.get('subscription_status', '')):
                                             st.session_state["password_correct"] = True
                                             st.session_state["user_email"] = correct_email  # Use correct case from DB
                                             st.session_state["user_id"] = user.get('id')  # Store user_id for proper filtering!
@@ -383,6 +383,19 @@ def _validate_legal_acceptance(agree_terms: bool, agree_privacy: bool):
     if not agree_privacy:
         return "Please accept the Privacy Policy to continue."
     return None
+
+
+# Statuses that permit a user to access the application.
+_SUBSCRIPTION_STATUSES_ALLOWING_LOGIN = frozenset({'active', 'trialing', 'trial'})
+
+
+def _subscription_allows_login(status: str) -> bool:
+    """Return True iff *status* is a subscription state that permits login.
+
+    Centralises the allowed-status check so it can be unit-tested independently
+    of Streamlit and the login form UI.
+    """
+    return status in _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN
 
 
 def _hash_password(password: str) -> str:
@@ -854,12 +867,25 @@ def show_password_setup_form(setup_token: str):
                                         'used': True
                                     }).eq('token', setup_token).execute()
                                     
-                                    # Set session state to log them in automatically
+                                    # Set session state to log them in automatically.
+                                    # Resolve user_id: prefer the update response but fall back to
+                                    # an explicit SELECT if RLS suppresses the returned row (a known
+                                    # issue when the app uses custom auth rather than Supabase Auth).
+                                    uid = None
+                                    if update_result.data and update_result.data[0].get('id'):
+                                        uid = update_result.data[0]['id']
+                                    else:
+                                        try:
+                                            uid_row = supabase.table('users').select('id').eq('email', email).execute()
+                                            if uid_row.data:
+                                                uid = uid_row.data[0]['id']
+                                        except Exception:
+                                            pass  # Non-fatal; session still created without user_id
+
                                     st.session_state["password_correct"] = True
                                     st.session_state["user_email"] = email.lower()
-                                    # Get user_id from the update result
-                                    if update_result.data and update_result.data[0].get('id'):
-                                        st.session_state["user_id"] = update_result.data[0]['id']
+                                    if uid:
+                                        st.session_state["user_id"] = uid
                                     
                                     st.success("✅ Password set successfully! Logging you in...")
                                     st.balloons()
