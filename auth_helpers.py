@@ -569,8 +569,13 @@ def show_subscribe_tab():
                                     app_url=app_url,
                                 )
                                 checkout_session = stripe.checkout.Session.create(**kwargs)
-                                st.markdown(f'<meta http-equiv="refresh" content="0; url={checkout_session.url}">',
-                                           unsafe_allow_html=True)
+                                checkout_url = checkout_session.url
+                                st.markdown(
+                                    f'<script>window.top.location.href = "{checkout_url}";</script>'
+                                    f'<p>If you are not redirected automatically, '
+                                    f'<a href="{checkout_url}" target="_top">click here to proceed to checkout</a>.</p>',
+                                    unsafe_allow_html=True,
+                                )
                                 st.success("Redirecting to secure checkout...")
                                 st.balloons()
                             except Exception as e:
