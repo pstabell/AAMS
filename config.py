@@ -109,6 +109,29 @@ SUBSCRIPTION_OFFER = {
 # HELPER FUNCTIONS
 # =============================================================================
 
+# =============================================================================
+# SUPPORT CONTACT CONFIG
+# =============================================================================
+# Used in the subscribe tab and post-checkout onboarding copy.
+# Override at runtime via environment variables:
+#   SUPPORT_EMAIL — contact address shown to users (overrides email_fallback)
+#   FROM_EMAIL    — also accepted as a fallback when SUPPORT_EMAIL is not set
+#   SUPPORT_URL   — optional; wraps the email in a Markdown link when set
+
+SUPPORT_CONTACT = {
+    # Shown when neither SUPPORT_EMAIL nor FROM_EMAIL env vars are configured
+    'email_fallback': "support@agentcommissiontracker.com",
+    # Label text prepended to the contact address in the subscribe tab
+    'cta_text': "Questions? Email us",
+    # Ordered steps shown under "What happens after checkout" in the subscribe tab
+    'post_checkout_steps': [
+        "You'll receive a setup email with your account link.",
+        "Click the link to create your password — no card charged yet.",
+        f"Your {SUBSCRIPTION_OFFER['trial_days']}-day free trial starts immediately.",
+    ],
+}
+
+
 def is_feature_enabled(feature_name: str) -> bool:
     """Check if a feature is enabled."""
     return FEATURES.get(feature_name, False)

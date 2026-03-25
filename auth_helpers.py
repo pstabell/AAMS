@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import secrets
 import string
 import time
-from config import SUBSCRIPTION_OFFER, is_feature_enabled
+from config import SUBSCRIPTION_OFFER, SUPPORT_CONTACT, is_feature_enabled
 
 def check_subscription_status(email: str, supabase: Client) -> dict:
     """Check if user has active subscription."""
@@ -447,6 +447,24 @@ def _should_block_checkout(existing_status):
     return False, ''
 
 
+def _get_support_contact() -> str:
+    """Return a support contact string sourced from env vars or config fallback.
+
+    Priority: SUPPORT_EMAIL env var → FROM_EMAIL env var → SUPPORT_CONTACT config.
+    If SUPPORT_URL env var is set, the result is wrapped in a Markdown link.
+    Pure function — no Streamlit calls, no side-effects; easy to unit-test.
+    """
+    email = (
+        os.getenv("SUPPORT_EMAIL")
+        or os.getenv("FROM_EMAIL")
+        or SUPPORT_CONTACT["email_fallback"]
+    )
+    url = os.getenv("SUPPORT_URL", "")
+    if url:
+        return f"[{email}]({url})"
+    return email
+
+
 def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url: str) -> dict:
     """Return kwargs for stripe.checkout.Session.create (pure, no side-effects)."""
     return dict(
@@ -484,7 +502,14 @@ def show_subscribe_tab():
     st.markdown(f"### Start Your {trial_days}-Day Free Trial")
     st.markdown(f"Then {SUBSCRIPTION_OFFER['trial_price_monthly']}")
     st.caption(SUBSCRIPTION_OFFER['trial_caption'])
-    
+
+    # "What happens after checkout" — always shown so users know what to expect
+    steps = SUPPORT_CONTACT['post_checkout_steps']
+    if steps:
+        st.markdown("**What happens after checkout:**")
+        for step in steps:
+            st.markdown(f"- {step}")
+
     # Import Stripe only in production
     if os.getenv("APP_ENVIRONMENT") == "PRODUCTION":
         import stripe
@@ -581,6 +606,10 @@ def show_subscribe_tab():
                             except Exception as e:
                                 st.error(f"Error creating checkout session: {e}")
                                 st.caption("Please check your internet connection and try again.")
+
+    # Support contact — always shown below the subscribe form
+    st.caption(f"{SUPPORT_CONTACT['cta_text']}: {_get_support_contact()}")
+
 
 def generate_reset_token(length=32):
     """Generate a secure random token for password reset."""

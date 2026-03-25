@@ -35,6 +35,7 @@ from auth_helpers import (  # noqa: E402
     _subscription_allows_login,
     _SUBSCRIPTION_STATUSES_ALLOWING_LOGIN,
     _should_block_checkout,
+    _get_support_contact,
 )
 
 _FIXED_AT = '2026-03-24T12:00:00Z'
@@ -701,6 +702,142 @@ class TestShouldBlockCheckout(unittest.TestCase):
                 block,
                 msg=f"status '{status}' allows login but did not block checkout",
             )
+
+
+# ---------------------------------------------------------------------------
+# Support contact helper: _get_support_contact
+# ---------------------------------------------------------------------------
+class TestGetSupportContact(unittest.TestCase):
+    """_get_support_contact resolves email from env vars or config fallback."""
+
+    def _swap_env(self, **kwargs):
+        """Temporarily set env vars; return dict of originals for restore."""
+        original = {}
+        for k, v in kwargs.items():
+            original[k] = os.environ.get(k)
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        return original
+
+    def _restore_env(self, original):
+        for k, v in original.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def test_support_email_env_takes_priority(self):
+        orig = self._swap_env(SUPPORT_EMAIL="custom@example.com", FROM_EMAIL=None, SUPPORT_URL=None)
+        try:
+            self.assertIn("custom@example.com", _get_support_contact())
+        finally:
+            self._restore_env(orig)
+
+    def test_from_email_used_when_no_support_email(self):
+        orig = self._swap_env(SUPPORT_EMAIL=None, FROM_EMAIL="from@example.com", SUPPORT_URL=None)
+        try:
+            self.assertIn("from@example.com", _get_support_contact())
+        finally:
+            self._restore_env(orig)
+
+    def test_config_fallback_when_no_env_vars(self):
+        orig = self._swap_env(SUPPORT_EMAIL=None, FROM_EMAIL=None, SUPPORT_URL=None)
+        try:
+            from config import SUPPORT_CONTACT
+            self.assertIn(SUPPORT_CONTACT["email_fallback"], _get_support_contact())
+        finally:
+            self._restore_env(orig)
+
+    def test_returns_markdown_link_when_support_url_set(self):
+        orig = self._swap_env(
+            SUPPORT_EMAIL="help@example.com",
+            FROM_EMAIL=None,
+            SUPPORT_URL="https://help.example.com",
+        )
+        try:
+            result = _get_support_contact()
+            self.assertIn("[", result)
+            self.assertIn("](", result)
+            self.assertIn("https://help.example.com", result)
+        finally:
+            self._restore_env(orig)
+
+    def test_returns_plain_email_when_no_support_url(self):
+        orig = self._swap_env(SUPPORT_EMAIL="help@example.com", FROM_EMAIL=None, SUPPORT_URL=None)
+        try:
+            result = _get_support_contact()
+            self.assertNotIn("](", result)
+            self.assertIn("help@example.com", result)
+        finally:
+            self._restore_env(orig)
+
+    def test_support_email_overrides_from_email(self):
+        orig = self._swap_env(
+            SUPPORT_EMAIL="support@example.com",
+            FROM_EMAIL="from@example.com",
+            SUPPORT_URL=None,
+        )
+        try:
+            result = _get_support_contact()
+            self.assertIn("support@example.com", result)
+            self.assertNotIn("from@example.com", result)
+        finally:
+            self._restore_env(orig)
+
+
+# ---------------------------------------------------------------------------
+# Support contact config: SUPPORT_CONTACT
+# ---------------------------------------------------------------------------
+class TestSupportContactConfig(unittest.TestCase):
+    """SUPPORT_CONTACT in config.py has the required structure and copy."""
+
+    def setUp(self):
+        from config import SUPPORT_CONTACT
+        self.config = SUPPORT_CONTACT
+
+    def test_email_fallback_present_and_valid(self):
+        self.assertIn("email_fallback", self.config)
+        self.assertIsInstance(self.config["email_fallback"], str)
+        self.assertIn("@", self.config["email_fallback"])
+
+    def test_cta_text_present_and_non_empty(self):
+        self.assertIn("cta_text", self.config)
+        self.assertIsInstance(self.config["cta_text"], str)
+        self.assertTrue(len(self.config["cta_text"]) > 0)
+
+    def test_post_checkout_steps_is_list(self):
+        self.assertIn("post_checkout_steps", self.config)
+        self.assertIsInstance(self.config["post_checkout_steps"], list)
+
+    def test_post_checkout_steps_not_empty(self):
+        self.assertTrue(len(self.config["post_checkout_steps"]) > 0)
+
+    def test_post_checkout_steps_mention_setup_email_or_link(self):
+        """Users must be told they will receive a setup email or account link."""
+        joined = " ".join(self.config["post_checkout_steps"]).lower()
+        self.assertTrue(
+            "email" in joined or "setup" in joined or "link" in joined,
+            "post_checkout_steps should mention setup email or link",
+        )
+
+    def test_post_checkout_steps_mention_trial(self):
+        """Steps must reference the free trial."""
+        joined = " ".join(self.config["post_checkout_steps"]).lower()
+        self.assertIn("trial", joined)
+
+    def test_post_checkout_steps_reassure_no_immediate_charge(self):
+        """Users must be reassured no card is charged during trial signup."""
+        joined = " ".join(self.config["post_checkout_steps"]).lower()
+        self.assertTrue(
+            "no card" in joined or "no charge" in joined or "card charged" in joined,
+            "post_checkout_steps should reassure user no card is charged yet",
+        )
+
+    def test_post_checkout_steps_all_strings(self):
+        for step in self.config["post_checkout_steps"]:
+            self.assertIsInstance(step, str)
 
 
 if __name__ == '__main__':
