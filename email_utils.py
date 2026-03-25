@@ -291,7 +291,7 @@ def send_password_setup_email(to_email: str, setup_link: str):
                 </p>
                 
                 <div class="warning">
-                    <strong>⚠️ Important:</strong> This link expires in 1 hour for security reasons. If it expires, you can request a new one from the login page.
+                    <strong>⚠️ Important:</strong> This link expires in 24 hours for security reasons. If it expires, you can request a new one from the login page.
                 </div>
                 
                 <h3>What happens next?</h3>
@@ -335,7 +335,7 @@ def send_password_setup_email(to_email: str, setup_link: str):
     
     {setup_link}
     
-    ⚠️ Important: This link expires in 1 hour for security reasons. If it expires, you can request a new one from the login page.
+    ⚠️ Important: This link expires in 24 hours for security reasons. If it expires, you can request a new one from the login page.
     
     What happens next?
     - Click the link above to set your password

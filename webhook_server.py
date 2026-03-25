@@ -39,6 +39,19 @@ def health_check():
     """Health check endpoint for Render."""
     return jsonify({'status': 'healthy', 'version': '1.1'}), 200
 
+def _normalize_stripe_status(status):
+    """Normalise Stripe status strings to our internal conventions.
+
+    Stripe uses American single-L spelling ('canceled') but the rest of the
+    codebase — DB values, login gate, error messages — uses British two-L
+    spelling ('cancelled').  Centralising this here means every event handler
+    gets the same treatment automatically.
+    """
+    if status == 'canceled':
+        return 'cancelled'
+    return status
+
+
 def _resolve_tier_from_price_id(price_id):
     """Map a Stripe price ID to a subscription tier name.
 
@@ -79,9 +92,7 @@ def _get_subscription_info_from_stripe(subscription_id, session):
     if subscription_id and stripe.api_key:
         try:
             sub = stripe.Subscription.retrieve(subscription_id)
-            stripe_status = sub.get('status', 'active')
-            if stripe_status == 'canceled':
-                stripe_status = 'cancelled'
+            stripe_status = _normalize_stripe_status(sub.get('status', 'active'))
             known = {'active', 'trialing', 'past_due', 'cancelled', 'unpaid', 'incomplete'}
             status = stripe_status if stripe_status in known else 'active'
 
@@ -314,7 +325,7 @@ def stripe_webhook():
     # Handle subscription updated
     elif event['type'] == 'customer.subscription.updated':
         subscription = event['data']['object']
-        status = subscription.get('status')
+        status = _normalize_stripe_status(subscription.get('status'))
         customer_id = subscription.get('customer')
         
         print(f"Subscription updated: Customer {customer_id}, Status: {status}")
