@@ -117,11 +117,19 @@ class TestBuildCheckoutKwargs(unittest.TestCase):
     def test_metadata_accepted_at_is_passed_through(self):
         self.assertEqual(self.kwargs['metadata']['accepted_at'], _FIXED_AT)
 
-    def test_metadata_terms_version_present(self):
-        self.assertIn('terms_version', self.kwargs['metadata'])
+    def test_metadata_terms_version_matches_config(self):
+        from config import SUBSCRIPTION_OFFER
+        self.assertEqual(
+            self.kwargs['metadata']['terms_version'],
+            SUBSCRIPTION_OFFER['terms_version'],
+        )
 
-    def test_metadata_privacy_version_present(self):
-        self.assertIn('privacy_version', self.kwargs['metadata'])
+    def test_metadata_privacy_version_matches_config(self):
+        from config import SUBSCRIPTION_OFFER
+        self.assertEqual(
+            self.kwargs['metadata']['privacy_version'],
+            SUBSCRIPTION_OFFER['privacy_version'],
+        )
 
     # --- Other required fields ---
     def test_customer_email_is_set(self):
@@ -167,6 +175,8 @@ class TestCheckoutSessionCreateCalledCorrectly(unittest.TestCase):
         self.assertEqual(call_kwargs['payment_method_collection'], 'if_required')
         self.assertEqual(call_kwargs['metadata']['accepted_terms'], 'true')
         self.assertEqual(call_kwargs['metadata']['accepted_privacy'], 'true')
+        self.assertEqual(call_kwargs['metadata']['terms_version'], SUBSCRIPTION_OFFER['terms_version'])
+        self.assertEqual(call_kwargs['metadata']['privacy_version'], SUBSCRIPTION_OFFER['privacy_version'])
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +559,12 @@ class TestSubscriptionOfferConfig(unittest.TestCase):
 
     def test_has_trial_caption(self):
         self.assertIn('trial_caption', self.offer)
+
+    def test_has_terms_version(self):
+        self.assertIn('terms_version', self.offer)
+
+    def test_has_privacy_version(self):
+        self.assertIn('privacy_version', self.offer)
 
     # --- type contracts ---
 

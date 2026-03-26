@@ -16,6 +16,8 @@ from unittest.mock import patch, MagicMock
 # Ensure repo root is on the path when running from anywhere.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config import SUBSCRIPTION_OFFER
+
 # ---------------------------------------------------------------------------
 # Stub out ALL heavy dependencies BEFORE importing webhook_server so this
 # test file works even when the packages are not installed in the current
@@ -67,8 +69,8 @@ def _make_checkout_event(payment_status='no_payment_required', metadata=None, su
                     'accepted_terms': 'true',
                     'accepted_privacy': 'true',
                     'accepted_at': '2026-03-24T12:00:00Z',
-                    'terms_version': '2024-12-06',
-                    'privacy_version': '2024-12-06',
+                    'terms_version': SUBSCRIPTION_OFFER['terms_version'],
+                    'privacy_version': SUBSCRIPTION_OFFER['privacy_version'],
                 },
             }
         }

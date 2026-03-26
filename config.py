@@ -102,6 +102,9 @@ SUBSCRIPTION_OFFER = {
     'trial_caption': (
         "No charge for 14 days. Cancel anytime. Secure payment via Stripe."
     ),
+    # Version stamps recorded in Stripe checkout metadata for legal acceptance
+    'terms_version': '2024-12-06',
+    'privacy_version': '2024-12-06',
 }
 
 
