@@ -80,7 +80,7 @@ export async function getReportPolicies({
   let query = supabase
     .from("policies")
     .select("*")
-    .order("effective_date", { ascending: false });
+    .order("Effective Date", { ascending: false });
 
   if (agentEmail !== "__all__") {
     const emailFilter = agentEmail || userEmail;
@@ -88,13 +88,13 @@ export async function getReportPolicies({
   }
 
   if (dateFrom) {
-    query = query.gte("effective_date", dateFrom);
+    query = query.gte("Effective Date", dateFrom);
   }
   if (dateTo) {
-    query = query.lte("effective_date", dateTo);
+    query = query.lte("Effective Date", dateTo);
   }
   if (carrier) {
-    query = query.eq("carrier", carrier);
+    query = query.eq("Carrier Name", carrier);
   }
 
   const { data, error } = await query;
@@ -103,7 +103,34 @@ export async function getReportPolicies({
     return { data: [] as Policy[], error: formatError(error) };
   }
 
-  return { data: (data ?? []) as Policy[], error: null };
+  // Map raw legacy rows to normalised Policy shape
+  return {
+    data: (data ?? []).map((r: any) => ({
+      id: r._id ?? r.id,
+      customer: r["Customer"] ?? r.customer ?? "",
+      policy_number: r["Policy Number"] ?? r.policy_number ?? "",
+      carrier: r["Carrier Name"] ?? r.carrier ?? "",
+      mga: r["MGA Name"] ?? r.mga ?? null,
+      line_of_business: r["Policy Type"] ?? r.line_of_business ?? null,
+      premium_sold: Number(r["Premium Sold"] ?? r.premium_sold ?? 0),
+      policy_gross_comm_pct: Number(r["Policy Gross Comm %"] ?? r.policy_gross_comm_pct ?? 0),
+      agency_estimated_comm: Number(r["Agency Estimated Comm/Revenue (CRM)"] ?? r.agency_estimated_comm ?? 0),
+      agent_estimated_comm: Number(r["Agent Estimated Comm $"] ?? r.agent_estimated_comm ?? 0),
+      agent_paid_amount: Number(r["Agent Paid Amount (STMT)"] ?? r.agent_paid_amount ?? 0),
+      transaction_type: r["Transaction Type"] ?? r.transaction_type ?? "",
+      effective_date: r["Effective Date"] ?? r.effective_date ?? "",
+      policy_origination_date: r["Policy Origination Date"] ?? r.policy_origination_date ?? null,
+      expiration_date: r["X-DATE"] ?? r.expiration_date ?? null,
+      statement_date: r["STMT DATE"] ?? r.statement_date ?? null,
+      invoice_number: r.invoice_number ?? null,
+      notes: r["NOTES"] ?? r.notes ?? null,
+      user_email: r.user_email ?? "",
+      user_id: r.user_id ?? "",
+      created_at: r.created_at ?? null,
+      updated_at: r.updated_at ?? null,
+    })) as Policy[],
+    error: null,
+  };
 }
 
 /**

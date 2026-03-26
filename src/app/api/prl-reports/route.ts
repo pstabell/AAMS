@@ -135,35 +135,22 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("policies")
-      .select([
-        "id",
-        "policy_number",
-        "effective_date",
-        "customer_name",
-        "carrier",
-        "line_of_business",
-        "transaction_type",
-        "status",
-        "premium_sold",
-        "agency_estimated_comm",
-        "agent_estimated_comm",
-        "agent_paid_amount",
-      ].join(","))
+      .select("*")
       .eq("user_email", userEmail)
-      .order("effective_date", { ascending: false });
+      .order("Effective Date", { ascending: false });
 
     if (dateFrom) {
-      query = query.gte("effective_date", dateFrom);
+      query = query.gte("Effective Date", dateFrom);
     }
     if (dateTo) {
-      query = query.lte("effective_date", dateTo);
+      query = query.lte("Effective Date", dateTo);
     }
     if (statementMonth) {
       const yearMonth = statementMonth.split('-');
       if (yearMonth.length === 2) {
         const startDate = `${yearMonth[0]}-${yearMonth[1]}-01`;
         const endDate = new Date(parseInt(yearMonth[0]), parseInt(yearMonth[1]), 0).toISOString().split('T')[0];
-        query = query.gte("effective_date", startDate).lte("effective_date", endDate);
+        query = query.gte("Effective Date", startDate).lte("Effective Date", endDate);
       }
     }
 
@@ -182,58 +169,68 @@ export async function GET(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const row of (data || []) as any[]) {
-      const premium = addNumber(row.premium_sold);
-      const paid = addNumber(row.agent_paid_amount);
-      
+      // Map legacy column names to normalised names
+      const policyNumber = row["Policy Number"] ?? row.policy_number ?? '';
+      const effectiveDate = row["Effective Date"] ?? row.effective_date ?? '';
+      const customerName = row["Customer"] ?? row.customer ?? '';
+      const carrierName = row["Carrier Name"] ?? row.carrier ?? 'Unknown';
+      const lineOfBusiness = row["Policy Type"] ?? row.line_of_business ?? 'Unspecified';
+      const transactionType = row["Transaction Type"] ?? row.transaction_type ?? '';
+      const policyOriginationDate = row["Policy Origination Date"] ?? row.policy_origination_date ?? effectiveDate;
+      const rowId = row._id ?? row.id;
+
+      const premium = addNumber(row["Premium Sold"] ?? row.premium_sold);
+      const paid = addNumber(row["Agent Paid Amount (STMT)"] ?? row.agent_paid_amount);
+
       // Use stored values as fallback, but prefer calculated values
-      let agencyComm = addNumber(row.agency_estimated_comm);
-      let agentComm = addNumber(row.agent_estimated_comm);
-      
+      let agencyComm = addNumber(row["Agency Estimated Comm/Revenue (CRM)"] ?? row.agency_estimated_comm);
+      let agentComm = addNumber(row["Agent Estimated Comm $"] ?? row.agent_estimated_comm);
+
       // Calculate commission using rules engine if we have sufficient data
-      if (premium > 0 && row.transaction_type) {
+      if (premium > 0 && transactionType) {
         const commissionInput: PolicyCommissionInput = {
           premiumSold: premium,
-          policyGrossCommPct: agencyComm > 0 ? (agencyComm / premium) * 100 : 10, // Default to 10% if not available
-          transactionType: row.transaction_type,
-          carrier: row.carrier,
-          policyOriginationDate: row.policy_origination_date || row.effective_date,
-          effectiveDate: row.effective_date,
+          policyGrossCommPct: agencyComm > 0 ? (agencyComm / premium) * 100 : 10,
+          transactionType: transactionType,
+          carrier: carrierName,
+          policyOriginationDate: policyOriginationDate,
+          effectiveDate: effectiveDate,
           agentPaidAmount: paid,
           userId: user.id,
-          policyId: row.id,
+          policyId: rowId,
           agentId: row.agent_id,
           carrierId: row.carrier_id,
         };
 
         try {
           const { data: commissionResult, error: commissionError } = await calculatePolicyCommission(commissionInput);
-          
+
           if (!commissionError && commissionResult) {
             agencyComm = commissionResult.agencyCommission;
             agentComm = commissionResult.agentCommission;
           }
         } catch (error) {
-          console.warn(`Commission calculation failed for policy ${row.policy_number}:`, error);
+          console.warn(`Commission calculation failed for policy ${policyNumber}:`, error);
           // Fall back to stored values
         }
       }
 
       allTransactions.push({
-        id: row.id,
-        policyNumber: row.policy_number || '',
-        effectiveDate: row.effective_date || '',
-        statementMonth: formatStatementMonth(row.effective_date),
-        customer: row.customer_name || '',
-        carrier: row.carrier || 'Unknown',
-        lineOfBusiness: row.line_of_business || 'Unspecified',
-        transactionType: row.transaction_type || '',
-        status: row.status || '',
+        id: rowId,
+        policyNumber,
+        effectiveDate,
+        statementMonth: formatStatementMonth(effectiveDate),
+        customer: customerName,
+        carrier: carrierName,
+        lineOfBusiness,
+        transactionType,
+        status: row.reconciliation_status || '',
         premiumSold: premium,
         agencyCommission: agencyComm,
         agentCommission: agentComm,
         paidAmount: paid,
         balance: agentComm - paid,
-        indicator: getTransactionIndicator(row.transaction_type, row.status),
+        indicator: getTransactionIndicator(transactionType, row.reconciliation_status),
       });
     }
 

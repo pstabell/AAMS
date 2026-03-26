@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       query = query.lte("effective_date", dateTo);
     }
     if (carrier) {
-      query = query.eq("carrier_name", carrier);
+      query = query.eq("Carrier Name", carrier);
     }
 
     const { data, error } = await query;
