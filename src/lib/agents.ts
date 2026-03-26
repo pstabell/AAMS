@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 
+// App-facing type (used by UI components in contacts page)
 export type AgentContact = {
   id: string;
   name: string;
@@ -25,9 +26,34 @@ export type AgentCreateInput = {
 
 export type AgentUpdateInput = Partial<Omit<AgentCreateInput, "user_id">>;
 
+// ----- DB schema mapping helpers -----
+// The live agents table is actually an agency-membership table with columns:
+//   id, agency_id, user_id, name, email, role, is_active, created_at, updated_at
+// We map it to the AgentContact shape for the contacts directory UI.
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function dbRowToAgentContact(row: any): AgentContact {
+  return {
+    id: row.id,
+    name: row.name,
+    contact_name: row.name ?? null,
+    contact_email: row.email ?? null,
+    contact_phone: null, // not stored in agents table
+    notes: null,         // not stored in agents table
+    active: row.is_active ?? true,
+    user_id: row.user_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 function formatError(error: unknown) {
   if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return (error as { message: string }).message;
+  }
   return "Something went wrong. Please try again.";
 }
 
@@ -42,7 +68,7 @@ export async function getAgents(userId: string) {
     return { data: [] as AgentContact[], error: formatError(error) };
   }
 
-  return { data: (data ?? []) as AgentContact[], error: null };
+  return { data: (data ?? []).map(dbRowToAgentContact), error: null };
 }
 
 export async function getAgent(id: string, userId: string) {
@@ -57,15 +83,20 @@ export async function getAgent(id: string, userId: string) {
     return { data: null as AgentContact | null, error: formatError(error) };
   }
 
-  return { data: (data ?? null) as AgentContact | null, error: null };
+  return {
+    data: data ? dbRowToAgentContact(data) : null,
+    error: null,
+  };
 }
 
 export async function createAgent(payload: AgentCreateInput) {
   const { data, error } = await supabase
     .from("agents")
     .insert({
-      ...payload,
-      active: payload.active ?? true,
+      name: payload.name,
+      email: payload.contact_email || null,
+      is_active: payload.active ?? true,
+      user_id: payload.user_id,
     })
     .select("*")
     .single();
@@ -74,7 +105,7 @@ export async function createAgent(payload: AgentCreateInput) {
     return { data: null as AgentContact | null, error: formatError(error) };
   }
 
-  return { data: data as AgentContact, error: null };
+  return { data: dbRowToAgentContact(data), error: null };
 }
 
 export async function updateAgent(
@@ -82,9 +113,19 @@ export async function updateAgent(
   userId: string,
   updates: AgentUpdateInput
 ) {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const dbUpdates: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.contact_email !== undefined) dbUpdates.email = updates.contact_email;
+  if (updates.active !== undefined) dbUpdates.is_active = updates.active;
+
   const { data, error } = await supabase
     .from("agents")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(dbUpdates)
     .eq("id", id)
     .eq("user_id", userId)
     .select("*")
@@ -94,7 +135,7 @@ export async function updateAgent(
     return { data: null as AgentContact | null, error: formatError(error) };
   }
 
-  return { data: data as AgentContact, error: null };
+  return { data: dbRowToAgentContact(data), error: null };
 }
 
 export async function deleteAgent(id: string, userId: string) {
