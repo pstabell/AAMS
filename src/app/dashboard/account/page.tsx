@@ -175,6 +175,22 @@ function AgentProfile({
             </div>
           </div>
         </div>
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/billing/portal", { method: "POST" });
+                const data = await res.json();
+                if (data.url) window.location.href = data.url;
+              } catch {
+                alert("Unable to open billing portal.");
+              }
+            }}
+            className="btn-secondary text-sm"
+          >
+            Manage Billing &amp; Invoices
+          </button>
+        </div>
       </div>
 
       {/* Security Card */}
