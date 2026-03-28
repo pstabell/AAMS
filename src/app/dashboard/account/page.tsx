@@ -148,8 +148,8 @@ function AgentProfile({
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex-1 rounded-xl border-2 border-[var(--border-color)] bg-[var(--background)] p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border-2 border-[var(--border-color)] bg-[var(--background)] p-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--foreground-muted)] mb-2">Status</p>
             <div className="flex items-center gap-3">
               <span className="text-lg font-bold text-[var(--foreground)] capitalize">
@@ -158,6 +158,20 @@ function AgentProfile({
               <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusBadge(subscriptionStatus)}`}>
                 {subscriptionStatus}
               </span>
+            </div>
+          </div>
+          <div className="rounded-xl border-2 border-[var(--border-color)] bg-[var(--background)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--foreground-muted)] mb-2">Plan</p>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-bold text-[var(--foreground)] capitalize">
+                {(profile as any)?.subscription_plan?.replace("_", " ") || "Starter"}
+              </span>
+              <a
+                href="/pricing"
+                className="text-xs font-semibold text-[var(--accent-primary)] hover:underline"
+              >
+                Change Plan
+              </a>
             </div>
           </div>
         </div>
@@ -725,7 +739,7 @@ export default function AccountPage() {
       setError(null);
       const { data, error: fetchError } = await supabase
         .from("users")
-        .select("id, email, subscription_status, created_at")
+        .select("id, email, subscription_status, subscription_plan, created_at")
         .eq("id", user.id)
         .maybeSingle();
 
