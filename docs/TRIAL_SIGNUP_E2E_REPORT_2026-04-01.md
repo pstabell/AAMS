@@ -94,13 +94,25 @@ The most important production issue found is that the documented webhook health 
 ## Recommended Next Actions
 1. Restore or verify the live Render webhook service at `commission-tracker-webhook.onrender.com`.
 2. Apply the checked-in `render.yaml` blueprint so Render explicitly uses `gunicorn webhook_server:app` with `healthCheckPath: /health` for the webhook service and the Streamlit start command for the main app.
-3. After the webhook health endpoint is reachable, run one real Stripe test-mode trial signup using a test card or no-card-required trial path.
-4. Confirm in production logs that:
+3. Run `python3 scripts/trial_signup_smoke_check.py` before and after the Render change to capture a consistent readiness snapshot for the public app URL, public webhook health URL, local `/health` route, and required live E2E environment variables.
+4. After the webhook health endpoint is reachable, run one real Stripe test-mode trial signup using a test card or no-card-required trial path.
+5. Confirm in production logs that:
    - `checkout.session.completed` is received
    - user row is created or updated in `users`
    - setup token is inserted into `password_reset_tokens`
    - password setup email is sent successfully
-5. Capture the subscriber email, Stripe session ID, and webhook log timestamp in a follow-up report.
+6. Capture the subscriber email, Stripe session ID, and webhook log timestamp in a follow-up report.
+
+## Follow-up Automation Added
+A lightweight smoke-check helper now lives at `scripts/trial_signup_smoke_check.py`.
+
+It reports:
+- Public app reachability
+- Public webhook health reachability
+- Local Flask `/health` route status from `webhook_server.py`
+- Presence of the core env vars needed for a true live end-to-end trial test
+
+The script exits non-zero until the stack is genuinely ready for a live signup test, so it can also be reused in CI or a deployment shell as a fast gate.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
