@@ -1,0 +1,76 @@
+services:
+  - type: web
+    name: commission-tracker-app
+    runtime: python
+    plan: starter
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run commission_app.py --server.port $PORT --server.address 0.0.0.0
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENVIRONMENT
+        sync: false
+      - key: PRODUCTION_SUPABASE_URL
+        sync: false
+      - key: PRODUCTION_SUPABASE_ANON_KEY
+        sync: false
+      - key: PRODUCTION_SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RENDER_APP_URL
+        value: https://commission-tracker-app.onrender.com
+
+  - type: web
+    name: commission-tracker-webhook
+    runtime: python
+    plan: starter
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn webhook_server:app
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENVIRONMENT
+        sync: false
+      - key: PRODUCTION_SUPABASE_URL
+        sync: false
+      - key: PRODUCTION_SUPABASE_ANON_KEY
+        sync: false
+      - key: PRODUCTION_SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: RENDER_APP_URL
+        value: https://commission-tracker-app.onrender.com

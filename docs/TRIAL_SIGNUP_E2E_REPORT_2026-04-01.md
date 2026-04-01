@@ -93,13 +93,14 @@ The most important production issue found is that the documented webhook health 
 
 ## Recommended Next Actions
 1. Restore or verify the live Render webhook service at `commission-tracker-webhook.onrender.com`.
-2. After the webhook health endpoint is reachable, run one real Stripe test-mode trial signup using a test card or no-card-required trial path.
-3. Confirm in production logs that:
+2. Apply the checked-in `render.yaml` blueprint so Render explicitly uses `gunicorn webhook_server:app` with `healthCheckPath: /health` for the webhook service and the Streamlit start command for the main app.
+3. After the webhook health endpoint is reachable, run one real Stripe test-mode trial signup using a test card or no-card-required trial path.
+4. Confirm in production logs that:
    - `checkout.session.completed` is received
    - user row is created or updated in `users`
    - setup token is inserted into `password_reset_tokens`
    - password setup email is sent successfully
-4. Capture the subscriber email, Stripe session ID, and webhook log timestamp in a follow-up report.
+5. Capture the subscriber email, Stripe session ID, and webhook log timestamp in a follow-up report.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
