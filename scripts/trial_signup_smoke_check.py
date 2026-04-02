@@ -256,6 +256,74 @@ def check_local_webhook_route() -> dict[str, Any]:
         }
 
 
+def check_webhook_service_contract() -> dict[str, Any]:
+    required_routes = {
+        "/": "home",
+        "/health": "health_check",
+        "/test": "test_endpoint",
+        "/stripe-webhook": "stripe_webhook",
+    }
+    required_packages = {"flask", "stripe", "supabase", "gunicorn"}
+
+    problems: list[str] = []
+
+    try:
+        webhook_source = (ROOT / "webhook_server.py").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {
+            "ok": False,
+            "status": None,
+            "payload": "webhook_server.py is missing",
+            "routes": {},
+            "requirements": {},
+        }
+
+    discovered_routes: dict[str, dict[str, Any]] = {}
+    for route, handler in required_routes.items():
+        route_present = f"@app.route('{route}'" in webhook_source or f'@app.route("{route}"' in webhook_source
+        handler_present = f"def {handler}(" in webhook_source
+        discovered_routes[route] = {
+            "handler": handler,
+            "route_present": route_present,
+            "handler_present": handler_present,
+            "ok": route_present and handler_present,
+        }
+        if not discovered_routes[route]["ok"]:
+            problems.append(f"Missing webhook route contract for {route} -> {handler}")
+
+    try:
+        requirements_lines = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return {
+            "ok": False,
+            "status": None,
+            "payload": "requirements.txt is missing",
+            "routes": discovered_routes,
+            "requirements": {},
+        }
+
+    normalized_requirements = {
+        line.strip().split("==", 1)[0].split(">=", 1)[0].strip().lower()
+        for line in requirements_lines
+        if line.strip() and not line.strip().startswith("#")
+    }
+    requirements_status = {
+        package: package in normalized_requirements for package in sorted(required_packages)
+    }
+    missing_packages = [package for package, present in requirements_status.items() if not present]
+    if missing_packages:
+        problems.append("requirements.txt is missing packages: " + ", ".join(missing_packages))
+
+    return {
+        "ok": not problems,
+        "status": 200 if not problems else 500,
+        "payload": "Webhook service contract looks complete" if not problems else "; ".join(problems),
+        "routes": discovered_routes,
+        "requirements": requirements_status,
+        "missing_packages": missing_packages,
+    }
+
+
 def check_render_blueprint() -> dict[str, Any]:
     try:
         render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
@@ -471,6 +539,10 @@ def build_blockers_and_actions(report: dict[str, Any], missing_required: list[st
         blockers.append("Checked-in Render blueprint verification failed in this workspace.")
         actions.append("Fix render.yaml so both app and webhook services declare the expected commands, health checks, and env vars.")
 
+    if not report["local_checks"]["webhook_service_contract"]["ok"]:
+        blockers.append("Checked-in webhook service contract verification failed in this workspace.")
+        actions.append("Fix webhook_server.py routes and requirements.txt so the deployed Render webhook has the expected entrypoints and runtime dependencies.")
+
     if missing_required:
         blockers.append(
             "Required live E2E secrets are missing from this shell: " + ", ".join(missing_required)
@@ -506,6 +578,7 @@ def generate_report() -> dict[str, Any]:
             "webhook_health_route": check_local_webhook_route(),
             "checkout_contract": check_checkout_contract(),
             "render_blueprint": check_render_blueprint(),
+            "webhook_service_contract": check_webhook_service_contract(),
         },
     }
 
@@ -524,6 +597,7 @@ def generate_report() -> dict[str, Any]:
         "local_webhook_ok": report["local_checks"]["webhook_health_route"]["ok"],
         "checkout_contract_ok": report["local_checks"]["checkout_contract"]["ok"],
         "render_blueprint_ok": report["local_checks"]["render_blueprint"]["ok"],
+        "webhook_service_contract_ok": report["local_checks"]["webhook_service_contract"]["ok"],
         "missing_required_env_vars": missing_required,
         "blocking_reasons": blockers,
         "next_actions": next_actions,
@@ -535,6 +609,7 @@ def generate_report() -> dict[str, Any]:
             and report["local_checks"]["webhook_health_route"]["ok"]
             and report["local_checks"]["checkout_contract"]["ok"]
             and report["local_checks"]["render_blueprint"]["ok"]
+            and report["local_checks"]["webhook_service_contract"]["ok"]
             and not missing_required
         ),
     }
@@ -571,6 +646,8 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Checkout contract payload: {report['local_checks']['checkout_contract']['payload']}",
         f"- Render blueprint OK: {'YES' if summary['render_blueprint_ok'] else 'NO'}",
         f"- Render blueprint payload: {report['local_checks']['render_blueprint']['payload']}",
+        f"- Webhook service contract OK: {'YES' if summary['webhook_service_contract_ok'] else 'NO'}",
+        f"- Webhook service contract payload: {report['local_checks']['webhook_service_contract']['payload']}",
         "",
         "## Missing required env vars",
     ]

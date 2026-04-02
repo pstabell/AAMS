@@ -151,6 +151,60 @@ services:
         self.assertTrue(details["services"]["commission-tracker-app"]["start_command_ok"])
         self.assertTrue(details["services"]["commission-tracker-webhook"]["health_check_path_ok"])
 
+    def test_check_webhook_service_contract_reports_expected_routes_and_packages(self):
+        webhook_source = """
+@app.route('/')
+def home():
+    return 'ok'
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return 'ok'
+
+@app.route('/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    return 'ok'
+
+@app.route('/test', methods=['GET', 'POST'])
+def test_endpoint():
+    return 'ok'
+"""
+        requirements = "Flask\nstripe\nsupabase\ngunicorn\n"
+        with mock.patch.object(
+            pathlib.Path,
+            "read_text",
+            side_effect=[webhook_source, requirements],
+        ):
+            details = smoke.check_webhook_service_contract()
+
+        self.assertTrue(details["ok"])
+        self.assertEqual(details["status"], 200)
+        self.assertEqual(details["payload"], "Webhook service contract looks complete")
+        self.assertTrue(details["routes"]["/health"]["ok"])
+        self.assertTrue(details["requirements"]["flask"])
+        self.assertEqual(details["missing_packages"], [])
+
+    def test_check_webhook_service_contract_reports_missing_routes_and_packages(self):
+        webhook_source = """
+@app.route('/')
+def home():
+    return 'ok'
+"""
+        requirements = "Flask\n"
+        with mock.patch.object(
+            pathlib.Path,
+            "read_text",
+            side_effect=[webhook_source, requirements],
+        ):
+            details = smoke.check_webhook_service_contract()
+
+        self.assertFalse(details["ok"])
+        self.assertEqual(details["status"], 500)
+        self.assertIn("Missing webhook route contract for /health", details["payload"])
+        self.assertIn("requirements.txt is missing packages", details["payload"])
+        self.assertIn("stripe", details["missing_packages"])
+        self.assertFalse(details["routes"]["/health"]["ok"])
+
     def test_check_render_blueprint_reports_missing_requirements_cleanly(self):
         render_yaml = """
 services:
@@ -270,6 +324,17 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
                 "services": {},
                 "missing_services": [],
             },
+        ), mock.patch.object(
+            smoke,
+            "check_webhook_service_contract",
+            return_value={
+                "ok": True,
+                "status": 200,
+                "payload": "Webhook service contract looks complete",
+                "routes": {},
+                "requirements": {},
+                "missing_packages": [],
+            },
         ):
             return smoke.generate_report()
 
@@ -284,6 +349,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("Any webhook endpoint OK: YES", markdown)
         self.assertIn("Checkout contract OK: YES", markdown)
         self.assertIn("Render blueprint OK: YES", markdown)
+        self.assertIn("Webhook service contract OK: YES", markdown)
         self.assertIn("## Blocking reasons", markdown)
         self.assertIn("## Recommended next actions", markdown)
         self.assertIn("## Render restore checklist", markdown)
@@ -308,6 +374,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertFalse(payload["summary"]["public_webhook_no_server"])
         self.assertTrue(payload["summary"]["checkout_contract_ok"])
         self.assertTrue(payload["summary"]["render_blueprint_ok"])
+        self.assertTrue(payload["summary"]["webhook_service_contract_ok"])
         self.assertEqual(payload["summary"]["missing_required_env_vars"], [])
         self.assertGreaterEqual(len(payload["summary"]["render_restore_checklist"]), 1)
         self.assertGreaterEqual(len(payload["summary"]["render_restore_validation_commands"]), 3)
@@ -393,6 +460,17 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
                 "payload": "Render blueprint looks complete",
                 "services": {},
                 "missing_services": [],
+            },
+        ), mock.patch.object(
+            smoke,
+            "check_webhook_service_contract",
+            return_value={
+                "ok": True,
+                "status": 200,
+                "payload": "Webhook service contract looks complete",
+                "routes": {},
+                "requirements": {},
+                "missing_packages": [],
             },
         ), mock.patch("sys.stdout") as stdout:
             exit_code = smoke.main([])

@@ -137,13 +137,14 @@ It now also emits a targeted `render_restore_checklist` in both JSON and Markdow
 It now also emits `render_restore_validation_commands` in both JSON and Markdown output. That gives ops a copy-paste validation sequence covering the public webhook probe, smoke-check rerun, secret loading, artifact refresh, and regression suite after the Render service is restored.
 
 ## Latest refresh
-- Added Render restore validation command output to `scripts/trial_signup_smoke_check.py`
+- Added checked-in webhook service contract verification to `scripts/trial_signup_smoke_check.py`
+- The smoke check now proves both repo-side webhook routes and runtime packages are present before blaming Render: `/`, `/health`, `/test`, `/stripe-webhook` plus `flask`, `stripe`, `supabase`, and `gunicorn`
 - Added regression coverage in `test_trial_signup_smoke_check.py`
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 161/161
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 163/163
 - Fresh artifacts:
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1314ET.json`
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1314ET.md`
-- Current blocker remains unchanged in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, which points at Render service/domain attachment rather than a missing Flask route in the repo.
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1514ET.json`
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1514ET.md`
+- Current blocker remains unchanged in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, while the checked-in Render blueprint and webhook service contract now both verify cleanly. That narrows the issue further to Render service/domain attachment or external runtime state, not missing repo routes or Python package declarations.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
