@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -47,6 +48,12 @@ LIVE_E2E_ENV_VARS = [
     "RESEND_API_KEY",
     "SUPABASE_SERVICE_KEY",
 ]
+
+CHECKOUT_CONTRACT_DEFAULTS = {
+    "accepted_at": "2026-04-02T00:00:00+00:00",
+    "email": "smoke-check@example.com",
+    "app_url": APP_URL.rstrip("/"),
+}
 
 OPTIONAL_ENV_VARS = [
     "APP_ENVIRONMENT",
@@ -206,6 +213,61 @@ def check_local_webhook_route() -> dict[str, Any]:
         }
 
 
+def check_checkout_contract() -> dict[str, Any]:
+    try:
+        from config import SUBSCRIPTION_OFFER
+
+        auth_helpers_source = (ROOT / "auth_helpers.py").read_text(encoding="utf-8")
+        match = re.search(
+            r"def _build_checkout_kwargs\(.*?\n\s*return dict\((.*?)\n\s*\)\n\n",
+            auth_helpers_source,
+            re.DOTALL,
+        )
+        if not match:
+            raise ValueError("Could not locate _build_checkout_kwargs in auth_helpers.py")
+
+        checkout_block = re.sub(r"\s+", " ", match.group(1)).strip()
+        metadata_keys = sorted(
+            key
+            for key in ("accepted_terms", "accepted_privacy", "accepted_at", "terms_version", "privacy_version")
+            if f"'{key}'" in checkout_block or f'"{key}"' in checkout_block
+        )
+        contract = {
+            "mode": "subscription" if "mode='subscription'" in checkout_block or 'mode="subscription"' in checkout_block else None,
+            "trial_period_days": SUBSCRIPTION_OFFER["trial_days"] if "subscription_data={'trial_period_days': SUBSCRIPTION_OFFER['trial_days']}" in checkout_block or 'subscription_data={"trial_period_days": SUBSCRIPTION_OFFER["trial_days"]}' in checkout_block else None,
+            "payment_method_collection": "if_required" if "payment_method_collection='if_required'" in checkout_block or 'payment_method_collection="if_required"' in checkout_block else None,
+            "allow_promotion_codes": "allow_promotion_codes=True" in checkout_block,
+            "success_url": CHECKOUT_CONTRACT_DEFAULTS["app_url"] + "/?session_id={CHECKOUT_SESSION_ID}" if "success_url=app_url + '/?session_id={CHECKOUT_SESSION_ID}'" in checkout_block or 'success_url=app_url + "/?session_id={CHECKOUT_SESSION_ID}"' in checkout_block else None,
+            "cancel_url": CHECKOUT_CONTRACT_DEFAULTS["app_url"] if "cancel_url=app_url" in checkout_block else None,
+            "metadata_keys": metadata_keys,
+        }
+        expected_trial_days = SUBSCRIPTION_OFFER["trial_days"]
+        ok = (
+            contract["mode"] == "subscription"
+            and contract["trial_period_days"] == expected_trial_days
+            and contract["payment_method_collection"] == "if_required"
+            and contract["allow_promotion_codes"] is True
+            and contract["success_url"] == CHECKOUT_CONTRACT_DEFAULTS["app_url"] + "/?session_id={CHECKOUT_SESSION_ID}"
+            and contract["cancel_url"] == CHECKOUT_CONTRACT_DEFAULTS["app_url"]
+            and len(contract["metadata_keys"]) == 5
+        )
+        return {
+            "ok": ok,
+            "status": 200 if ok else 500,
+            "payload": contract,
+            "expected_trial_days": expected_trial_days,
+            "price_id_source": "env" if os.getenv("STRIPE_PRICE_ID") else "placeholder",
+        }
+    except Exception as exc:  # pragma: no cover - defensive failure reporting
+        return {
+            "ok": False,
+            "status": None,
+            "payload": str(exc),
+            "expected_trial_days": None,
+            "price_id_source": "env" if os.getenv("STRIPE_PRICE_ID") else "placeholder",
+        }
+
+
 def build_blockers_and_actions(report: dict[str, Any], missing_required: list[str]) -> tuple[list[str], list[str]]:
     blockers: list[str] = []
     actions: list[str] = []
@@ -239,6 +301,10 @@ def build_blockers_and_actions(report: dict[str, Any], missing_required: list[st
         blockers.append("Local webhook /health verification failed in this workspace.")
         actions.append("Fix the local webhook import/runtime issue before trusting deployment parity.")
 
+    if not report["local_checks"]["checkout_contract"]["ok"]:
+        blockers.append("Local checkout contract verification failed in this workspace.")
+        actions.append("Fix the checkout session contract so trial signup still uses the expected Stripe subscription settings.")
+
     if missing_required:
         blockers.append(
             "Required live E2E secrets are missing from this shell: " + ", ".join(missing_required)
@@ -270,6 +336,7 @@ def generate_report() -> dict[str, Any]:
         },
         "local_checks": {
             "webhook_health_route": check_local_webhook_route(),
+            "checkout_contract": check_checkout_contract(),
         },
     }
 
@@ -286,6 +353,7 @@ def generate_report() -> dict[str, Any]:
         "public_webhook_no_server": report["public_checks"]["webhook_diagnostics"]["no_server"],
         "public_webhook_likely_cause": report["public_checks"]["webhook_diagnostics"]["likely_cause"],
         "local_webhook_ok": report["local_checks"]["webhook_health_route"]["ok"],
+        "checkout_contract_ok": report["local_checks"]["checkout_contract"]["ok"],
         "missing_required_env_vars": missing_required,
         "blocking_reasons": blockers,
         "next_actions": next_actions,
@@ -293,6 +361,7 @@ def generate_report() -> dict[str, Any]:
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
             and report["local_checks"]["webhook_health_route"]["ok"]
+            and report["local_checks"]["checkout_contract"]["ok"]
             and not missing_required
         ),
     }
@@ -325,6 +394,8 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         "## Local checks",
         f"- Local webhook route OK: {'YES' if summary['local_webhook_ok'] else 'NO'}",
         f"- Local webhook payload: {report['local_checks']['webhook_health_route']['payload']}",
+        f"- Checkout contract OK: {'YES' if summary['checkout_contract_ok'] else 'NO'}",
+        f"- Checkout contract payload: {report['local_checks']['checkout_contract']['payload']}",
         "",
         "## Missing required env vars",
     ]

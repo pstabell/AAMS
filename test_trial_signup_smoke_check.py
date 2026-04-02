@@ -94,6 +94,47 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("dependencies missing", details["payload"].lower())
         self.assertEqual(details["dependency_check"]["missing_modules"], ["stripe"])
 
+    def test_check_checkout_contract_reports_expected_stripe_contract(self):
+        auth_helpers_source = """
+def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url: str) -> dict:
+    return dict(
+        line_items=[{'price': price_id, 'quantity': 1}],
+        mode='subscription',
+        customer_email=email,
+        subscription_data={'trial_period_days': SUBSCRIPTION_OFFER['trial_days']},
+        metadata={
+            'accepted_terms': 'true',
+            'accepted_privacy': 'true',
+            'accepted_at': accepted_at,
+            'terms_version': SUBSCRIPTION_OFFER.get('terms_version', '2024-12-06'),
+            'privacy_version': SUBSCRIPTION_OFFER.get('privacy_version', '2024-12-06'),
+        },
+        payment_method_collection='if_required',
+        success_url=app_url + '/?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=app_url,
+        allow_promotion_codes=True,
+    )
+
+"""
+        with mock.patch.object(pathlib.Path, "read_text", return_value=auth_helpers_source):
+            details = smoke.check_checkout_contract()
+
+        self.assertTrue(details["ok"])
+        self.assertEqual(details["status"], 200)
+        self.assertEqual(details["payload"]["mode"], "subscription")
+        self.assertEqual(details["payload"]["trial_period_days"], 14)
+        self.assertEqual(details["payload"]["payment_method_collection"], "if_required")
+        self.assertTrue(details["payload"]["allow_promotion_codes"])
+        self.assertIn("accepted_terms", details["payload"]["metadata_keys"])
+
+    def test_check_checkout_contract_reports_parse_failure_cleanly(self):
+        with mock.patch.object(pathlib.Path, "read_text", return_value="def nope():\n    return None\n"):
+            details = smoke.check_checkout_contract()
+
+        self.assertFalse(details["ok"])
+        self.assertIsNone(details["status"])
+        self.assertIn("Could not locate _build_checkout_kwargs", details["payload"])
+
     def _build_ready_report(self):
         env_values = {name: {"present": True, "length": 10} for name in smoke.LIVE_E2E_ENV_VARS}
         optional_values = {name: {"present": False, "length": 0} for name in smoke.OPTIONAL_ENV_VARS}
@@ -124,6 +165,24 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
             smoke,
             "check_local_webhook_route",
             return_value={"ok": True, "status": 200, "payload": {"status": "ok"}, "dependency_check": {"ok": True, "missing_modules": []}},
+        ), mock.patch.object(
+            smoke,
+            "check_checkout_contract",
+            return_value={
+                "ok": True,
+                "status": 200,
+                "payload": {
+                    "mode": "subscription",
+                    "trial_period_days": 14,
+                    "payment_method_collection": "if_required",
+                    "allow_promotion_codes": True,
+                    "success_url": "https://commission-tracker-app.onrender.com/?session_id={CHECKOUT_SESSION_ID}",
+                    "cancel_url": "https://commission-tracker-app.onrender.com",
+                    "metadata_keys": ["accepted_at", "accepted_privacy", "accepted_terms", "privacy_version", "terms_version"],
+                },
+                "expected_trial_days": 14,
+                "price_id_source": "placeholder",
+            },
         ):
             return smoke.generate_report()
 
@@ -136,6 +195,7 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("Ready for live e2e: YES", markdown)
         self.assertIn("Webhook no-server detected: NO", markdown)
         self.assertIn("Any webhook endpoint OK: YES", markdown)
+        self.assertIn("Checkout contract OK: YES", markdown)
         self.assertIn("## Blocking reasons", markdown)
         self.assertIn("## Recommended next actions", markdown)
         self.assertIn("Run one real Stripe test-mode signup", markdown)
@@ -154,6 +214,7 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertTrue(payload["summary"]["public_webhook_any_endpoint_ok"])
         self.assertFalse(payload["summary"]["public_webhook_all_probed_endpoints_404"])
         self.assertFalse(payload["summary"]["public_webhook_no_server"])
+        self.assertTrue(payload["summary"]["checkout_contract_ok"])
         self.assertEqual(payload["summary"]["missing_required_env_vars"], [])
 
     def test_main_can_write_json_and_markdown_outputs(self):
@@ -208,6 +269,24 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
             smoke,
             "check_local_webhook_route",
             return_value={"ok": True, "status": 200, "payload": {"status": "ok"}, "dependency_check": {"ok": True, "missing_modules": []}},
+        ), mock.patch.object(
+            smoke,
+            "check_checkout_contract",
+            return_value={
+                "ok": True,
+                "status": 200,
+                "payload": {
+                    "mode": "subscription",
+                    "trial_period_days": 14,
+                    "payment_method_collection": "if_required",
+                    "allow_promotion_codes": True,
+                    "success_url": "https://commission-tracker-app.onrender.com/?session_id={CHECKOUT_SESSION_ID}",
+                    "cancel_url": "https://commission-tracker-app.onrender.com",
+                    "metadata_keys": ["accepted_at", "accepted_privacy", "accepted_terms", "privacy_version", "terms_version"],
+                },
+                "expected_trial_days": 14,
+                "price_id_source": "placeholder",
+            },
         ), mock.patch("sys.stdout") as stdout:
             exit_code = smoke.main([])
 
@@ -220,6 +299,7 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertTrue(payload["summary"]["public_webhook_no_server"])
         self.assertEqual(payload["summary"]["public_webhook_render_routing_modes"], ["no-server"])
         self.assertIn("no healthy backend service", payload["summary"]["public_webhook_likely_cause"].lower())
+        self.assertTrue(payload["summary"]["checkout_contract_ok"])
         self.assertEqual(payload["summary"]["missing_required_env_vars"], ["STRIPE_WEBHOOK_SECRET"])
         self.assertGreaterEqual(len(payload["summary"]["blocking_reasons"]), 2)
         self.assertTrue(any("no-server" in reason.lower() for reason in payload["summary"]["blocking_reasons"]))
