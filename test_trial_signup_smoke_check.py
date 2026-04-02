@@ -112,6 +112,65 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("from webhook_server import app", commands[2])
         self.assertIn("client.get('/health')", commands[2])
 
+    def test_build_render_service_env_gap_groups_missing_env_by_service(self):
+        report = {
+            "env": {
+                "required_for_live_e2e": {
+                    "STRIPE_SECRET_KEY": {"present": True, "length": 10},
+                    "STRIPE_WEBHOOK_SECRET": {"present": False, "length": 0},
+                    "STRIPE_PRICE_ID": {"present": True, "length": 10},
+                    "RESEND_API_KEY": {"present": False, "length": 0},
+                    "SUPABASE_SERVICE_KEY": {"present": True, "length": 10},
+                },
+                "optional_context": {
+                    "APP_ENVIRONMENT": {"present": True, "length": 10},
+                    "PRODUCTION_SUPABASE_URL": {"present": False, "length": 0},
+                    "PRODUCTION_SUPABASE_ANON_KEY": {"present": False, "length": 0},
+                    "PRODUCTION_SUPABASE_SERVICE_KEY": {"present": False, "length": 0},
+                },
+            },
+            "local_checks": {
+                "render_blueprint": {
+                    "services": {
+                        "commission-tracker-app": {
+                            "present": True,
+                            "start_command": "streamlit run commission_app.py --server.port $PORT --server.address 0.0.0.0",
+                            "health_check_path": "/",
+                            "missing_required_env_vars": [],
+                        },
+                        "commission-tracker-webhook": {
+                            "present": True,
+                            "start_command": "gunicorn webhook_server:app",
+                            "health_check_path": "/health",
+                            "missing_required_env_vars": [],
+                        },
+                    }
+                }
+            },
+        }
+
+        with mock.patch.object(
+            smoke,
+            "inspect_env_var",
+            side_effect=lambda name: {
+                "SUPABASE_URL": {"present": True, "length": 10},
+                "SUPABASE_ANON_KEY": {"present": True, "length": 10},
+                "RENDER_APP_URL": {"present": True, "length": 10},
+                "SMTP_HOST": {"present": False, "length": 0},
+                "SMTP_PORT": {"present": False, "length": 0},
+                "SMTP_USER": {"present": False, "length": 0},
+                "SMTP_PASS": {"present": False, "length": 0},
+                "FROM_EMAIL": {"present": False, "length": 0},
+            }.get(name, {"present": False, "length": 0}),
+        ):
+            details = smoke.build_render_service_env_gap(report)
+
+        self.assertFalse(details["commission-tracker-app"]["shell_ready"])
+        self.assertIn("RESEND_API_KEY", details["commission-tracker-app"]["missing_in_shell"])
+        self.assertIn("STRIPE_WEBHOOK_SECRET", details["commission-tracker-webhook"]["missing_in_shell"])
+        self.assertIn("SMTP_HOST", details["commission-tracker-webhook"]["missing_in_shell"])
+        self.assertEqual(details["commission-tracker-webhook"]["missing_in_blueprint"], [])
+
     def test_check_render_blueprint_reports_expected_services(self):
         render_yaml = """
 services:
@@ -286,7 +345,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
 
     def _build_ready_report(self):
         env_values = {name: {"present": True, "length": 10} for name in smoke.LIVE_E2E_ENV_VARS}
-        optional_values = {name: {"present": False, "length": 0} for name in smoke.OPTIONAL_ENV_VARS}
+        optional_values = {name: {"present": True, "length": 10} for name in smoke.OPTIONAL_ENV_VARS}
 
         with mock.patch.object(smoke, "fetch_url", side_effect=[
             {"ok": True, "status": 200, "reason": "OK", "body_preview": "app ok"},
@@ -309,7 +368,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         ), mock.patch.object(
             smoke,
             "inspect_env_var",
-            side_effect=lambda name: env_values[name] if name in env_values else optional_values[name],
+            side_effect=lambda name: env_values[name] if name in env_values else optional_values.get(name, {"present": True, "length": 10}),
         ), mock.patch.object(
             smoke,
             "check_local_webhook_route",
@@ -373,9 +432,11 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render restore checklist", markdown)
         self.assertIn("## Render restore validation commands", markdown)
         self.assertIn("## Local webhook dependency commands", markdown)
+        self.assertIn("## Render service env gap", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
         self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
         self.assertIn("Run one real Stripe test-mode signup", markdown)
+        self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
 
     def test_main_returns_zero_when_stack_is_ready(self):
@@ -399,6 +460,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertGreaterEqual(len(payload["summary"]["render_restore_validation_commands"]), 3)
         self.assertIn("commission-tracker-webhook", payload["summary"]["render_restore_checklist"][0])
         self.assertEqual(payload["summary"]["render_restore_validation_commands"][0], "curl -i https://commission-tracker-webhook.onrender.com/health")
+        self.assertEqual(payload["summary"]["render_service_env_gap"]["commission-tracker-app"]["missing_in_shell"], [])
+        self.assertTrue(payload["summary"]["render_service_env_gap"]["commission-tracker-webhook"]["shell_ready"])
 
     def test_main_can_write_json_and_markdown_outputs(self):
         report = self._build_ready_report()
@@ -447,7 +510,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         ), mock.patch.object(
             smoke,
             "inspect_env_var",
-            side_effect=lambda name: required[name] if name in required else optional_values[name],
+            side_effect=lambda name: required[name] if name in required else optional_values.get(name, {"present": False, "length": 0}),
         ), mock.patch.object(
             smoke,
             "check_local_webhook_route",
@@ -510,6 +573,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertTrue(any("missing stripe" in action.lower() or "missing stripe, resend, and supabase" in action.lower() for action in payload["summary"]["next_actions"]))
         self.assertTrue(any("x-render-routing=no-server" in step for step in payload["summary"]["render_restore_checklist"]))
         self.assertTrue(any(command.startswith("export STRIPE_WEBHOOK_SECRET=...") for command in payload["summary"]["render_restore_validation_commands"]))
+        self.assertIn("STRIPE_WEBHOOK_SECRET", payload["summary"]["render_service_env_gap"]["commission-tracker-webhook"]["missing_in_shell"])
         self.assertEqual(payload["summary"]["local_webhook_dependency_commands"], [])
         self.assertFalse(payload["summary"]["ready_for_live_e2e"])
 

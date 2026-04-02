@@ -139,13 +139,13 @@ It now also emits `render_restore_validation_commands` in both JSON and Markdown
 It now also emits `local_webhook_dependency_commands` in both JSON and Markdown output so anyone verifying parity locally gets exact install and recheck commands when Flask or Stripe are missing from the shell.
 
 ## Latest refresh
-- Added `local_webhook_dependency_commands` to `scripts/trial_signup_smoke_check.py` so the smoke-check output now includes exact install and recheck commands when local webhook verification is blocked by missing Python packages.
+- Added `render_service_env_gap` to `scripts/trial_signup_smoke_check.py` so each smoke-check run now groups missing runtime variables by Render service, showing exactly what the app shell and webhook shell still need after routing is restored.
 - Added regression coverage in `test_trial_signup_smoke_check.py`
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 164/164
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 165/165
 - Fresh artifacts:
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1714ET.json`
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1714ET.md`
-- Current blocker remains unchanged in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, while the checked-in Render blueprint and webhook service contract now both verify cleanly. Local verification is still blocked in this shell until `flask` and `stripe` are installed, and the smoke-check output now spells out the exact remediation commands.
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1917ET.json`
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1917ET.md`
+- Current blocker remains unchanged in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, while the checked-in Render blueprint and webhook service contract still verify cleanly. The new service-env gap output now makes the remaining shell/runtime gaps explicit too: this shell currently has `SUPABASE_URL` and `SUPABASE_ANON_KEY`, but it is still missing the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
