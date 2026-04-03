@@ -625,6 +625,34 @@ def build_render_service_env_commands(render_service_env_gap: dict[str, Any]) ->
     return commands_by_service
 
 
+def build_render_service_contract_commands() -> dict[str, list[str]]:
+    commands_by_service: dict[str, list[str]] = {}
+
+    for service_name, expected in RENDER_BLUEPRINT_SERVICES.items():
+        commands_by_service[service_name] = [
+            "Render dashboard -> {} -> Settings: confirm runtime={} and plan={}".format(
+                service_name, expected["runtime"], expected["plan"]
+            ),
+            "Render dashboard -> {} -> Settings: confirm autoDeploy={}".format(
+                service_name, "true" if expected["autoDeploy"] else "false"
+            ),
+            "Render dashboard -> {} -> Build & Deploy: confirm buildCommand='{}'".format(
+                service_name, expected["buildCommand"]
+            ),
+            "Render dashboard -> {} -> Build & Deploy: confirm startCommand='{}'".format(
+                service_name, expected["startCommand"]
+            ),
+            "Render dashboard -> {} -> Health Check: confirm path='{}'".format(
+                service_name, expected["healthCheckPath"]
+            ),
+            "Render dashboard -> {} -> Environment: confirm keys {}".format(
+                service_name, ", ".join(sorted(expected["required_env_vars"]))
+            ),
+        ]
+
+    return commands_by_service
+
+
 def build_blockers_and_actions(report: dict[str, Any], missing_required: list[str]) -> tuple[list[str], list[str], list[str], list[str], list[str], dict[str, Any]]:
     blockers: list[str] = []
     actions: list[str] = []
@@ -731,6 +759,7 @@ def generate_report() -> dict[str, Any]:
     ]
     blockers, next_actions, render_restore_checklist, render_restore_validation_commands, local_webhook_dependency_commands, render_service_env_gap = build_blockers_and_actions(report, missing_required)
     render_service_env_commands = build_render_service_env_commands(render_service_env_gap)
+    render_service_contract_commands = build_render_service_contract_commands()
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -751,6 +780,7 @@ def generate_report() -> dict[str, Any]:
         "local_webhook_dependency_commands": local_webhook_dependency_commands,
         "render_service_env_gap": render_service_env_gap,
         "render_service_env_commands": render_service_env_commands,
+        "render_service_contract_commands": render_service_contract_commands,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
@@ -867,6 +897,12 @@ def render_markdown_report(report: dict[str, Any]) -> str:
 
     lines.extend(["", "## Render service env commands"])
     for service_name, commands in summary["render_service_env_commands"].items():
+        lines.append(f"- {service_name}:")
+        for command in commands:
+            lines.append(f"  - {command}")
+
+    lines.extend(["", "## Render service contract commands"])
+    for service_name, commands in summary["render_service_contract_commands"].items():
         lines.append(f"- {service_name}:")
         for command in commands:
             lines.append(f"  - {command}")

@@ -193,6 +193,14 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Environment: set STRIPE_WEBHOOK_SECRET=...", commands["commission-tracker-webhook"])
         self.assertIn("Verify commission-tracker-webhook serves /health after the deploy.", commands["commission-tracker-webhook"])
 
+    def test_build_render_service_contract_commands_lists_expected_dashboard_settings(self):
+        commands = smoke.build_render_service_contract_commands()
+
+        self.assertIn("Render dashboard -> commission-tracker-app -> Settings: confirm runtime=python and plan=starter", commands["commission-tracker-app"])
+        self.assertIn("Render dashboard -> commission-tracker-app -> Build & Deploy: confirm startCommand='streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0'", commands["commission-tracker-app"])
+        self.assertIn("Render dashboard -> commission-tracker-webhook -> Health Check: confirm path='/health'", commands["commission-tracker-webhook"])
+        self.assertTrue(any("STRIPE_WEBHOOK_SECRET" in command for command in commands["commission-tracker-webhook"]))
+
     def test_check_render_blueprint_reports_expected_services(self):
         render_yaml = """
 services:
@@ -512,9 +520,11 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render restore validation commands", markdown)
         self.assertIn("## Local webhook dependency commands", markdown)
         self.assertIn("## Render service env gap", markdown)
+        self.assertIn("## Render service contract commands", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
         self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
         self.assertIn("Run one real Stripe test-mode signup", markdown)
+        self.assertIn("Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm startCommand='gunicorn webhook_server:app --bind 0.0.0.0:${PORT}'", markdown)
         self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
 

@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T05:16:03.581982+00:00",
+  "generated_at": "2026-04-03T07:17:24.169119+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -324,6 +324,24 @@
       "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
       "python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py"
     ],
+    "render_service_contract_commands": {
+      "commission-tracker-app": [
+        "Render dashboard -> commission-tracker-app -> Settings: confirm runtime=python and plan=starter",
+        "Render dashboard -> commission-tracker-app -> Settings: confirm autoDeploy=true",
+        "Render dashboard -> commission-tracker-app -> Build & Deploy: confirm buildCommand='pip install -r requirements.txt'",
+        "Render dashboard -> commission-tracker-app -> Build & Deploy: confirm startCommand='streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0'",
+        "Render dashboard -> commission-tracker-app -> Health Check: confirm path='/'",
+        "Render dashboard -> commission-tracker-app -> Environment: confirm keys APP_ENVIRONMENT, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL"
+      ],
+      "commission-tracker-webhook": [
+        "Render dashboard -> commission-tracker-webhook -> Settings: confirm runtime=python and plan=starter",
+        "Render dashboard -> commission-tracker-webhook -> Settings: confirm autoDeploy=true",
+        "Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm buildCommand='pip install -r requirements.txt'",
+        "Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm startCommand='gunicorn webhook_server:app --bind 0.0.0.0:${PORT}'",
+        "Render dashboard -> commission-tracker-webhook -> Health Check: confirm path='/health'",
+        "Render dashboard -> commission-tracker-webhook -> Environment: confirm keys APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL"
+      ]
+    },
     "render_service_env_commands": {
       "commission-tracker-app": [
         "Render dashboard -> commission-tracker-app -> Environment: set APP_ENVIRONMENT=..., PRODUCTION_SUPABASE_ANON_KEY=..., PRODUCTION_SUPABASE_SERVICE_KEY=..., PRODUCTION_SUPABASE_URL=..., RENDER_APP_URL=..., RESEND_API_KEY=..., STRIPE_PRICE_ID=..., STRIPE_SECRET_KEY=..., SUPABASE_SERVICE_KEY=...",

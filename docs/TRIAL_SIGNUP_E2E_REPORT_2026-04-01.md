@@ -142,7 +142,8 @@ It now also emits `local_webhook_dependency_commands` in both JSON and Markdown 
 - Tightened the smoke-check Render blueprint verification so it now validates each checked-in service's `runtime`, `plan`, `autoDeploy`, `buildCommand`, `startCommand`, and `healthCheckPath` instead of checking only the start command and health path. This makes it much easier to separate repo-side blueprint drift from the still-live external routing failure.
 - Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` with the stricter Render contract checks plus Markdown reporting for the expanded blueprint summary.
 - Added per-service Render environment handoff commands to the smoke-check summary so ops can copy the exact missing runtime variables into `commission-tracker-app` and `commission-tracker-webhook` without reverse-engineering the JSON env gap section.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 167/167
+- Added per-service Render contract commands to the smoke-check summary so ops can compare the live Render dashboard against the checked-in blueprint one field at a time for runtime, plan, autoDeploy, build command, start command, health path, and required env keys.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 168/168
 - Fresh artifacts:
   - `docs/smoke-checks/latest-trial-signup-smoke-check.json`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.md`

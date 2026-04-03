@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-03T05:16:03.581982+00:00
+Generated at: 2026-04-03T07:17:24.169119+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -85,6 +85,22 @@ PY
   - Render dashboard -> commission-tracker-webhook -> Environment: set APP_ENVIRONMENT=..., FROM_EMAIL=..., PRODUCTION_SUPABASE_ANON_KEY=..., PRODUCTION_SUPABASE_SERVICE_KEY=..., PRODUCTION_SUPABASE_URL=..., RENDER_APP_URL=..., RESEND_API_KEY=..., SMTP_HOST=..., SMTP_PASS=..., SMTP_PORT=..., SMTP_USER=..., STRIPE_PRICE_ID=..., STRIPE_SECRET_KEY=..., STRIPE_WEBHOOK_SECRET=..., SUPABASE_SERVICE_KEY=...
   - After saving env vars for commission-tracker-webhook, trigger a manual deploy and wait for a healthy instance.
   - Verify commission-tracker-webhook serves /health after the deploy.
+
+## Render service contract commands
+- commission-tracker-app:
+  - Render dashboard -> commission-tracker-app -> Settings: confirm runtime=python and plan=starter
+  - Render dashboard -> commission-tracker-app -> Settings: confirm autoDeploy=true
+  - Render dashboard -> commission-tracker-app -> Build & Deploy: confirm buildCommand='pip install -r requirements.txt'
+  - Render dashboard -> commission-tracker-app -> Build & Deploy: confirm startCommand='streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0'
+  - Render dashboard -> commission-tracker-app -> Health Check: confirm path='/'
+  - Render dashboard -> commission-tracker-app -> Environment: confirm keys APP_ENVIRONMENT, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL
+- commission-tracker-webhook:
+  - Render dashboard -> commission-tracker-webhook -> Settings: confirm runtime=python and plan=starter
+  - Render dashboard -> commission-tracker-webhook -> Settings: confirm autoDeploy=true
+  - Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm buildCommand='pip install -r requirements.txt'
+  - Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm startCommand='gunicorn webhook_server:app --bind 0.0.0.0:${PORT}'
+  - Render dashboard -> commission-tracker-webhook -> Health Check: confirm path='/health'
+  - Render dashboard -> commission-tracker-webhook -> Environment: confirm keys APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL
 
 ## Probe previews
 - Webhook health preview: Not Found
