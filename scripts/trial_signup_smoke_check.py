@@ -64,7 +64,7 @@ OPTIONAL_ENV_VARS = [
 
 RENDER_BLUEPRINT_SERVICES = {
     "commission-tracker-app": {
-        "startCommand": "streamlit run commission_app.py --server.port $PORT --server.address 0.0.0.0",
+        "startCommand": "streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0",
         "healthCheckPath": "/",
         "required_env_vars": {
             "APP_ENVIRONMENT",
@@ -81,7 +81,7 @@ RENDER_BLUEPRINT_SERVICES = {
         },
     },
     "commission-tracker-webhook": {
-        "startCommand": "gunicorn webhook_server:app",
+        "startCommand": "gunicorn webhook_server:app --bind 0.0.0.0:${PORT}",
         "healthCheckPath": "/health",
         "required_env_vars": {
             "APP_ENVIRONMENT",

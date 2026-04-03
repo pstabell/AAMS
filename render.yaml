@@ -5,7 +5,7 @@ services:
     plan: starter
     autoDeploy: true
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run commission_app.py --server.port $PORT --server.address 0.0.0.0
+    startCommand: streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0
     healthCheckPath: /
     envVars:
       - key: APP_ENVIRONMENT
@@ -37,7 +37,7 @@ services:
     plan: starter
     autoDeploy: true
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn webhook_server:app
+    startCommand: gunicorn webhook_server:app --bind 0.0.0.0:${PORT}
     healthCheckPath: /health
     envVars:
       - key: APP_ENVIRONMENT

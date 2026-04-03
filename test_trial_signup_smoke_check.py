@@ -140,7 +140,7 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
                         },
                         "commission-tracker-webhook": {
                             "present": True,
-                            "start_command": "gunicorn webhook_server:app",
+                            "start_command": "gunicorn webhook_server:app --bind 0.0.0.0:${PORT}",
                             "health_check_path": "/health",
                             "missing_required_env_vars": [],
                         },
@@ -178,7 +178,7 @@ services:
     name: commission-tracker-app
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run commission_app.py --server.port $PORT --server.address 0.0.0.0
+    startCommand: streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0
     healthCheckPath: /
     envVars:
       - key: APP_ENVIRONMENT
@@ -197,7 +197,7 @@ services:
     name: commission-tracker-webhook
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn webhook_server:app
+    startCommand: gunicorn webhook_server:app --bind 0.0.0.0:${PORT}
     healthCheckPath: /health
     envVars:
       - key: APP_ENVIRONMENT

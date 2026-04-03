@@ -100,7 +100,7 @@ The most important production issue found is that the documented webhook health 
 
 ## Recommended Next Actions
 1. Restore or verify the live Render webhook service at `commission-tracker-webhook.onrender.com`.
-2. Apply the checked-in `render.yaml` blueprint so Render explicitly uses `gunicorn webhook_server:app` with `healthCheckPath: /health` for the webhook service and the Streamlit start command for the main app.
+2. Apply the checked-in `render.yaml` blueprint so Render explicitly uses `gunicorn webhook_server:app --bind 0.0.0.0:${PORT}` with `healthCheckPath: /health` for the webhook service and the Streamlit start command for the main app.
 3. Run `python3 scripts/trial_signup_smoke_check.py` before and after the Render change to capture a consistent readiness snapshot for the public app URL, public webhook health URL, local `/health` route, and required live E2E environment variables.
 4. After the webhook health endpoint is reachable, run one real Stripe test-mode trial signup using a test card or no-card-required trial path.
 5. Confirm in production logs that:
@@ -139,13 +139,13 @@ It now also emits `render_restore_validation_commands` in both JSON and Markdown
 It now also emits `local_webhook_dependency_commands` in both JSON and Markdown output so anyone verifying parity locally gets exact install and recheck commands when Flask or Stripe are missing from the shell.
 
 ## Latest refresh
-- Added `render_service_env_gap` to `scripts/trial_signup_smoke_check.py` so each smoke-check run now groups missing runtime variables by Render service, showing exactly what the app shell and webhook shell still need after routing is restored.
-- Added regression coverage in `test_trial_signup_smoke_check.py`
+- Tightened the checked-in Render webhook blueprint so the webhook service now explicitly binds Gunicorn to `0.0.0.0:${PORT}` instead of relying on the default bind, and normalized the app start command to `${PORT}` for safer shell parsing in the smoke-check tooling.
+- Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` so the readiness gate now verifies the stronger webhook start command contract directly.
 - Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 165/165
 - Fresh artifacts:
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1917ET.json`
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T1917ET.md`
-- Current blocker remains unchanged in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, while the checked-in Render blueprint and webhook service contract still verify cleanly. The new service-env gap output now makes the remaining shell/runtime gaps explicit too: this shell currently has `SUPABASE_URL` and `SUPABASE_ANON_KEY`, but it is still missing the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T2114ET.json`
+  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T2114ET.md`
+- Current blocker remains external in production: after the blueprint fix, `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server`, which confirms the remaining issue is Render service/domain attachment or runtime state rather than missing repo routes. This shell still has only `SUPABASE_URL` and `SUPABASE_ANON_KEY`; it is still missing the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
