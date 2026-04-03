@@ -726,6 +726,42 @@ def build_render_hostname_diagnostics(report: dict[str, Any]) -> dict[str, dict[
     return hostname_diagnostics
 
 
+def build_render_incident_signature(report: dict[str, Any], render_hostname_diagnostics: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    app_host = render_hostname_diagnostics["commission-tracker-app"]
+    webhook_host = render_hostname_diagnostics["commission-tracker-webhook"]
+    blueprint_ok = report["local_checks"]["render_blueprint"]["ok"]
+    webhook_contract_ok = report["local_checks"]["webhook_service_contract"]["ok"]
+    checkout_ok = report["local_checks"]["checkout_contract"]["ok"]
+
+    repo_contract_ok = blueprint_ok and webhook_contract_ok and checkout_ok
+    external_routing_issue = (
+        app_host.get("attachment_state") == "healthy-attached"
+        and webhook_host.get("attachment_state") == "missing-backend-attachment"
+    )
+
+    if external_routing_issue and repo_contract_ok:
+        conclusion = (
+            "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached "
+            "and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression."
+        )
+    elif external_routing_issue:
+        conclusion = (
+            "The webhook hostname looks detached at Render, but repo-side contract checks are not fully green yet, so confirm both deployment wiring and checked-in config before rerunning the live signup path."
+        )
+    else:
+        conclusion = (
+            "The current probe pattern does not isolate the outage to a clean app-host healthy versus webhook-host detached split. Review both repo-side checks and Render runtime state together."
+        )
+
+    return {
+        "repo_contract_ok": repo_contract_ok,
+        "app_host_attachment_state": app_host.get("attachment_state"),
+        "webhook_host_attachment_state": webhook_host.get("attachment_state"),
+        "external_routing_issue": external_routing_issue,
+        "conclusion": conclusion,
+    }
+
+
 def build_blockers_and_actions(report: dict[str, Any], missing_required: list[str]) -> tuple[list[str], list[str], list[str], list[str], list[str], dict[str, Any]]:
     blockers: list[str] = []
     actions: list[str] = []
@@ -835,6 +871,7 @@ def generate_report() -> dict[str, Any]:
     render_service_contract_commands = build_render_service_contract_commands()
     render_domain_attachment_commands = build_render_domain_attachment_commands(report)
     render_hostname_diagnostics = build_render_hostname_diagnostics(report)
+    render_incident_signature = build_render_incident_signature(report, render_hostname_diagnostics)
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -858,6 +895,7 @@ def generate_report() -> dict[str, Any]:
         "render_service_contract_commands": render_service_contract_commands,
         "render_domain_attachment_commands": render_domain_attachment_commands,
         "render_hostname_diagnostics": render_hostname_diagnostics,
+        "render_incident_signature": render_incident_signature,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
@@ -1006,6 +1044,19 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 details.get("evidence"),
             )
         )
+
+    incident = summary["render_incident_signature"]
+    lines.extend(
+        [
+            "",
+            "## Render incident signature",
+            f"- Repo contract OK: {'YES' if incident['repo_contract_ok'] else 'NO'}",
+            f"- App host attachment state: {incident['app_host_attachment_state']}",
+            f"- Webhook host attachment state: {incident['webhook_host_attachment_state']}",
+            f"- External routing issue isolated: {'YES' if incident['external_routing_issue'] else 'NO'}",
+            f"- Conclusion: {incident['conclusion']}",
+        ]
+    )
 
     lines.extend(
         [

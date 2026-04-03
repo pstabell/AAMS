@@ -142,11 +142,12 @@ It now also emits `local_webhook_dependency_commands` in both JSON and Markdown 
 - Added a Render hostname diagnostics matrix to the smoke-check summary so ops can see, in one section, which public hostname is healthy and which one is missing a backend attachment.
 - Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` so the JSON and Markdown artifacts now include `render_hostname_diagnostics` alongside the existing domain-attachment, env-gap, and service-contract handoff sections.
 - Fresh evidence now explicitly classifies `commission-tracker-app.onrender.com` as `healthy-attached` with `x-render-origin-server=TornadoServer/6.5.5`, while `commission-tracker-webhook.onrender.com` is classified as `missing-backend-attachment` with `HTTP 404` and `x-render-routing=no-server` on `/health`.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 170/170
+- Added a new `render_incident_signature` section to the smoke-check output so the handoff now states, in one line, whether the failure pattern isolates cleanly to external Render routing/domain binding versus a repo-side regression.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 171/171
 - Fresh artifacts:
   - `docs/smoke-checks/latest-trial-signup-smoke-check.json`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.md`
-- Current blocker remains external in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server` on `/`, `/health`, `/test`, and `/stripe-webhook`, which continues to point at Render service/domain attachment or runtime state rather than missing repo routes. This shell still lacks the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
+- Current blocker remains external in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server` on `/`, `/health`, `/test`, and `/stripe-webhook`, and the new incident signature flags that split as an external Render service/domain binding problem rather than an app-code route regression. This shell still lacks the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**

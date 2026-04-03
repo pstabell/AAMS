@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-03T11:16:58.891254+00:00
+Generated at: 2026-04-03T13:17:13.803643+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -115,6 +115,13 @@ PY
 ## Render hostname diagnostics
 - commission-tracker-app: host=commission-tracker-app.onrender.com; expected_service=commission-tracker-app; probe_path=/; attachment_state=healthy-attached; status=200 OK; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; evidence=HTTP 200 with x-render-origin-server=TornadoServer/6.5.5
 - commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; expected_service=commission-tracker-webhook; probe_path=/health; attachment_state=missing-backend-attachment; status=404 Not Found; x-render-origin-server=None; x-render-routing=no-server; evidence=HTTP 404 with x-render-routing=no-server
+
+## Render incident signature
+- Repo contract OK: YES
+- App host attachment state: healthy-attached
+- Webhook host attachment state: missing-backend-attachment
+- External routing issue isolated: YES
+- Conclusion: Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.
 
 ## Probe previews
 - Webhook health preview: Not Found

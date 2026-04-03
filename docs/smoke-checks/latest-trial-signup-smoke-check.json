@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T11:16:58.891254+00:00",
+  "generated_at": "2026-04-03T13:17:13.803643+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -342,6 +342,13 @@
         "x_render_origin_server": null,
         "x_render_routing": "no-server"
       }
+    },
+    "render_incident_signature": {
+      "app_host_attachment_state": "healthy-attached",
+      "conclusion": "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.",
+      "external_routing_issue": true,
+      "repo_contract_ok": true,
+      "webhook_host_attachment_state": "missing-backend-attachment"
     },
     "render_restore_checklist": [
       "Open the Render dashboard for service commission-tracker-webhook.",

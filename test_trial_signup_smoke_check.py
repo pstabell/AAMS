@@ -255,6 +255,27 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(details["commission-tracker-webhook"]["x_render_routing"], "no-server")
         self.assertIn("HTTP 404", details["commission-tracker-webhook"]["evidence"])
 
+    def test_build_render_incident_signature_isolates_external_routing_issue(self):
+        report = {
+            "local_checks": {
+                "render_blueprint": {"ok": True},
+                "webhook_service_contract": {"ok": True},
+                "checkout_contract": {"ok": True},
+            }
+        }
+        hostname_diagnostics = {
+            "commission-tracker-app": {"attachment_state": "healthy-attached"},
+            "commission-tracker-webhook": {"attachment_state": "missing-backend-attachment"},
+        }
+
+        details = smoke.build_render_incident_signature(report, hostname_diagnostics)
+
+        self.assertTrue(details["repo_contract_ok"])
+        self.assertTrue(details["external_routing_issue"])
+        self.assertEqual(details["app_host_attachment_state"], "healthy-attached")
+        self.assertEqual(details["webhook_host_attachment_state"], "missing-backend-attachment")
+        self.assertIn("external Render service or domain binding problem", details["conclusion"])
+
     def test_check_render_blueprint_reports_expected_services(self):
         render_yaml = """
 services:
@@ -577,6 +598,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render service contract commands", markdown)
         self.assertIn("## Render domain attachment commands", markdown)
         self.assertIn("## Render hostname diagnostics", markdown)
+        self.assertIn("## Render incident signature", markdown)
+        self.assertIn("External routing issue isolated: NO", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
         self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
         self.assertIn("Run one real Stripe test-mode signup", markdown)
@@ -614,6 +637,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             payload["summary"]["render_domain_attachment_commands"]["commission-tracker-webhook"],
         )
         self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-app"]["attachment_state"], "healthy-attached")
+        self.assertTrue(payload["summary"]["render_incident_signature"]["repo_contract_ok"])
+        self.assertFalse(payload["summary"]["render_incident_signature"]["external_routing_issue"])
 
     def test_main_can_write_json_and_markdown_outputs(self):
         report = self._build_ready_report()
@@ -727,6 +752,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertTrue(any(command.startswith("export STRIPE_WEBHOOK_SECRET=...") for command in payload["summary"]["render_restore_validation_commands"]))
         self.assertIn("STRIPE_WEBHOOK_SECRET", payload["summary"]["render_service_env_gap"]["commission-tracker-webhook"]["missing_in_shell"])
         self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-webhook"]["attachment_state"], "missing-backend-attachment")
+        self.assertTrue(payload["summary"]["render_incident_signature"]["external_routing_issue"])
+        self.assertIn("domain binding problem", payload["summary"]["render_incident_signature"]["conclusion"])
         self.assertEqual(payload["summary"]["local_webhook_dependency_commands"], [])
         self.assertFalse(payload["summary"]["ready_for_live_e2e"])
 
