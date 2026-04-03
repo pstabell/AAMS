@@ -586,6 +586,45 @@ def build_render_service_env_gap(report: dict[str, Any]) -> dict[str, Any]:
     return service_gaps
 
 
+def build_render_service_env_commands(render_service_env_gap: dict[str, Any]) -> dict[str, list[str]]:
+    commands_by_service: dict[str, list[str]] = {}
+
+    for service_name, details in render_service_env_gap.items():
+        commands: list[str] = []
+        missing_shell = details.get("missing_in_shell", [])
+        missing_blueprint = details.get("missing_in_blueprint", [])
+
+        if missing_blueprint:
+            commands.append(
+                "Add the missing env vars to render.yaml for {}: {}".format(
+                    service_name, ", ".join(missing_blueprint)
+                )
+            )
+
+        if missing_shell:
+            commands.append(
+                "Render dashboard -> {} -> Environment: set {}".format(
+                    service_name, ", ".join(f"{name}=..." for name in missing_shell)
+                )
+            )
+            commands.append(
+                "After saving env vars for {}, trigger a manual deploy and wait for a healthy instance.".format(service_name)
+            )
+        else:
+            commands.append(
+                "{} already has every required runtime variable represented in this verification shell.".format(service_name)
+            )
+
+        commands.append(
+            "Verify {} serves {} after the deploy.".format(
+                service_name, details.get("health_check_path") or "/"
+            )
+        )
+        commands_by_service[service_name] = commands
+
+    return commands_by_service
+
+
 def build_blockers_and_actions(report: dict[str, Any], missing_required: list[str]) -> tuple[list[str], list[str], list[str], list[str], list[str], dict[str, Any]]:
     blockers: list[str] = []
     actions: list[str] = []
@@ -691,6 +730,7 @@ def generate_report() -> dict[str, Any]:
         name for name, details in report["env"]["required_for_live_e2e"].items() if not details["present"]
     ]
     blockers, next_actions, render_restore_checklist, render_restore_validation_commands, local_webhook_dependency_commands, render_service_env_gap = build_blockers_and_actions(report, missing_required)
+    render_service_env_commands = build_render_service_env_commands(render_service_env_gap)
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -710,6 +750,7 @@ def generate_report() -> dict[str, Any]:
         "render_restore_validation_commands": render_restore_validation_commands,
         "local_webhook_dependency_commands": local_webhook_dependency_commands,
         "render_service_env_gap": render_service_env_gap,
+        "render_service_env_commands": render_service_env_commands,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
@@ -823,6 +864,13 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     )
     for service_name, details in summary["render_service_env_gap"].items():
         lines.append(f"- {service_name}: shell_ready={'YES' if details['shell_ready'] else 'NO'}; missing_in_shell={', '.join(details['missing_in_shell']) if details['missing_in_shell'] else 'None'}; missing_in_blueprint={', '.join(details['missing_in_blueprint']) if details['missing_in_blueprint'] else 'None'}")
+
+    lines.extend(["", "## Render service env commands"])
+    for service_name, commands in summary["render_service_env_commands"].items():
+        lines.append(f"- {service_name}:")
+        for command in commands:
+            lines.append(f"  - {command}")
+
     lines.extend(
         [
             "",

@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T03:14:49.767210+00:00",
+  "generated_at": "2026-04-03T05:16:03.581982+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -71,6 +71,10 @@
       "payload": "Render blueprint looks complete",
       "services": {
         "commission-tracker-app": {
+          "auto_deploy": true,
+          "auto_deploy_ok": true,
+          "build_command": "pip install -r requirements.txt",
+          "build_command_ok": true,
           "env_vars": [
             "APP_ENVIRONMENT",
             "PRODUCTION_SUPABASE_ANON_KEY",
@@ -87,11 +91,19 @@
           "health_check_path": "/",
           "health_check_path_ok": true,
           "missing_required_env_vars": [],
+          "plan": "starter",
+          "plan_ok": true,
           "present": true,
+          "runtime": "python",
+          "runtime_ok": true,
           "start_command": "streamlit run commission_app.py --server.port ${PORT} --server.address 0.0.0.0",
           "start_command_ok": true
         },
         "commission-tracker-webhook": {
+          "auto_deploy": true,
+          "auto_deploy_ok": true,
+          "build_command": "pip install -r requirements.txt",
+          "build_command_ok": true,
           "env_vars": [
             "APP_ENVIRONMENT",
             "FROM_EMAIL",
@@ -114,7 +126,11 @@
           "health_check_path": "/health",
           "health_check_path_ok": true,
           "missing_required_env_vars": [],
+          "plan": "starter",
+          "plan_ok": true,
           "present": true,
+          "runtime": "python",
+          "runtime_ok": true,
           "start_command": "gunicorn webhook_server:app --bind 0.0.0.0:${PORT}",
           "start_command_ok": true
         }
@@ -308,6 +324,18 @@
       "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
       "python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py"
     ],
+    "render_service_env_commands": {
+      "commission-tracker-app": [
+        "Render dashboard -> commission-tracker-app -> Environment: set APP_ENVIRONMENT=..., PRODUCTION_SUPABASE_ANON_KEY=..., PRODUCTION_SUPABASE_SERVICE_KEY=..., PRODUCTION_SUPABASE_URL=..., RENDER_APP_URL=..., RESEND_API_KEY=..., STRIPE_PRICE_ID=..., STRIPE_SECRET_KEY=..., SUPABASE_SERVICE_KEY=...",
+        "After saving env vars for commission-tracker-app, trigger a manual deploy and wait for a healthy instance.",
+        "Verify commission-tracker-app serves / after the deploy."
+      ],
+      "commission-tracker-webhook": [
+        "Render dashboard -> commission-tracker-webhook -> Environment: set APP_ENVIRONMENT=..., FROM_EMAIL=..., PRODUCTION_SUPABASE_ANON_KEY=..., PRODUCTION_SUPABASE_SERVICE_KEY=..., PRODUCTION_SUPABASE_URL=..., RENDER_APP_URL=..., RESEND_API_KEY=..., SMTP_HOST=..., SMTP_PASS=..., SMTP_PORT=..., SMTP_USER=..., STRIPE_PRICE_ID=..., STRIPE_SECRET_KEY=..., STRIPE_WEBHOOK_SECRET=..., SUPABASE_SERVICE_KEY=...",
+        "After saving env vars for commission-tracker-webhook, trigger a manual deploy and wait for a healthy instance.",
+        "Verify commission-tracker-webhook serves /health after the deploy."
+      ]
+    },
     "render_service_env_gap": {
       "commission-tracker-app": {
         "blueprint_present": true,

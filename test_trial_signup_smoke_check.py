@@ -171,6 +171,28 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("SMTP_HOST", details["commission-tracker-webhook"]["missing_in_shell"])
         self.assertEqual(details["commission-tracker-webhook"]["missing_in_blueprint"], [])
 
+    def test_build_render_service_env_commands_groups_actions_per_service(self):
+        service_gap = {
+            "commission-tracker-app": {
+                "health_check_path": "/",
+                "missing_in_shell": ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
+                "missing_in_blueprint": [],
+            },
+            "commission-tracker-webhook": {
+                "health_check_path": "/health",
+                "missing_in_shell": ["STRIPE_WEBHOOK_SECRET"],
+                "missing_in_blueprint": ["FROM_EMAIL"],
+            },
+        }
+
+        commands = smoke.build_render_service_env_commands(service_gap)
+
+        self.assertIn("Render dashboard -> commission-tracker-app -> Environment: set STRIPE_SECRET_KEY=..., RESEND_API_KEY=...", commands["commission-tracker-app"])
+        self.assertIn("Verify commission-tracker-app serves / after the deploy.", commands["commission-tracker-app"])
+        self.assertIn("Add the missing env vars to render.yaml for commission-tracker-webhook: FROM_EMAIL", commands["commission-tracker-webhook"])
+        self.assertIn("Render dashboard -> commission-tracker-webhook -> Environment: set STRIPE_WEBHOOK_SECRET=...", commands["commission-tracker-webhook"])
+        self.assertIn("Verify commission-tracker-webhook serves /health after the deploy.", commands["commission-tracker-webhook"])
+
     def test_check_render_blueprint_reports_expected_services(self):
         render_yaml = """
 services:

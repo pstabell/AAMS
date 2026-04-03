@@ -141,10 +141,9 @@ It now also emits `local_webhook_dependency_commands` in both JSON and Markdown 
 ## Latest refresh
 - Tightened the smoke-check Render blueprint verification so it now validates each checked-in service's `runtime`, `plan`, `autoDeploy`, `buildCommand`, `startCommand`, and `healthCheckPath` instead of checking only the start command and health path. This makes it much easier to separate repo-side blueprint drift from the still-live external routing failure.
 - Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` with the stricter Render contract checks plus Markdown reporting for the expanded blueprint summary.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 166/166
+- Added per-service Render environment handoff commands to the smoke-check summary so ops can copy the exact missing runtime variables into `commission-tracker-app` and `commission-tracker-webhook` without reverse-engineering the JSON env gap section.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 167/167
 - Fresh artifacts:
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T2314ET.json`
-  - `docs/smoke-checks/trial-signup-smoke-check-2026-04-02T2314ET.md`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.json`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.md`
 - Current blocker remains external in production: even after the stricter blueprint verification passes cleanly, `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server` on `/`, `/health`, `/test`, and `/stripe-webhook`, which points at Render service/domain attachment or runtime state rather than missing repo routes. This shell still lacks the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
