@@ -219,6 +219,42 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         )
         self.assertTrue(any("x-render-routing=no-server" in command for command in commands["commission-tracker-webhook"]))
 
+    def test_build_render_hostname_diagnostics_classifies_app_and_webhook_hosts(self):
+        report = {
+            "app_url": "https://commission-tracker-app.onrender.com",
+            "webhook_base_url": "https://commission-tracker-webhook.onrender.com",
+            "public_checks": {
+                "app": {
+                    "ok": True,
+                    "status": 200,
+                    "reason": "OK",
+                    "headers": {
+                        "server": "cloudflare",
+                        "x-render-origin-server": "TornadoServer/6.5.5",
+                    },
+                },
+                "webhook_health": {
+                    "ok": False,
+                    "status": 404,
+                    "reason": "Not Found",
+                    "headers": {
+                        "server": "cloudflare",
+                        "x-render-routing": "no-server",
+                    },
+                },
+            },
+        }
+
+        details = smoke.build_render_hostname_diagnostics(report)
+
+        self.assertEqual(details["commission-tracker-app"]["attachment_state"], "healthy-attached")
+        self.assertEqual(details["commission-tracker-app"]["probe_path"], "/")
+        self.assertIn("x-render-origin-server=TornadoServer/6.5.5", details["commission-tracker-app"]["evidence"])
+        self.assertEqual(details["commission-tracker-webhook"]["attachment_state"], "missing-backend-attachment")
+        self.assertEqual(details["commission-tracker-webhook"]["probe_path"], "/health")
+        self.assertEqual(details["commission-tracker-webhook"]["x_render_routing"], "no-server")
+        self.assertIn("HTTP 404", details["commission-tracker-webhook"]["evidence"])
+
     def test_check_render_blueprint_reports_expected_services(self):
         render_yaml = """
 services:
@@ -540,11 +576,13 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render service env gap", markdown)
         self.assertIn("## Render service contract commands", markdown)
         self.assertIn("## Render domain attachment commands", markdown)
+        self.assertIn("## Render hostname diagnostics", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
         self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
         self.assertIn("Run one real Stripe test-mode signup", markdown)
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm startCommand='gunicorn webhook_server:app --bind 0.0.0.0:${PORT}'", markdown)
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.", markdown)
+        self.assertIn("attachment_state=healthy-attached", markdown)
         self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
 
@@ -575,6 +613,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             "Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.",
             payload["summary"]["render_domain_attachment_commands"]["commission-tracker-webhook"],
         )
+        self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-app"]["attachment_state"], "healthy-attached")
 
     def test_main_can_write_json_and_markdown_outputs(self):
         report = self._build_ready_report()
@@ -687,6 +726,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertTrue(any("x-render-routing=no-server" in step for step in payload["summary"]["render_restore_checklist"]))
         self.assertTrue(any(command.startswith("export STRIPE_WEBHOOK_SECRET=...") for command in payload["summary"]["render_restore_validation_commands"]))
         self.assertIn("STRIPE_WEBHOOK_SECRET", payload["summary"]["render_service_env_gap"]["commission-tracker-webhook"]["missing_in_shell"])
+        self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-webhook"]["attachment_state"], "missing-backend-attachment")
         self.assertEqual(payload["summary"]["local_webhook_dependency_commands"], [])
         self.assertFalse(payload["summary"]["ready_for_live_e2e"])
 

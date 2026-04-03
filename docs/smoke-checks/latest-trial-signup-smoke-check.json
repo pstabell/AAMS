@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T09:15:52.318646+00:00",
+  "generated_at": "2026-04-03T11:16:58.891254+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -316,6 +316,32 @@
         "curl -I https://commission-tracker-webhook.onrender.com/health",
         "If Render still returns x-render-routing=no-server, remove any stale domain attachment and reattach the webhook hostname to commission-tracker-webhook before redeploying."
       ]
+    },
+    "render_hostname_diagnostics": {
+      "commission-tracker-app": {
+        "attachment_state": "healthy-attached",
+        "evidence": "HTTP 200 with x-render-origin-server=TornadoServer/6.5.5",
+        "expected_service": "commission-tracker-app",
+        "host": "commission-tracker-app.onrender.com",
+        "probe_path": "/",
+        "reason": "OK",
+        "server": "cloudflare",
+        "status": 200,
+        "x_render_origin_server": "TornadoServer/6.5.5",
+        "x_render_routing": null
+      },
+      "commission-tracker-webhook": {
+        "attachment_state": "missing-backend-attachment",
+        "evidence": "HTTP 404 with x-render-routing=no-server",
+        "expected_service": "commission-tracker-webhook",
+        "host": "commission-tracker-webhook.onrender.com",
+        "probe_path": "/health",
+        "reason": "Not Found",
+        "server": "cloudflare",
+        "status": 404,
+        "x_render_origin_server": null,
+        "x_render_routing": "no-server"
+      }
     },
     "render_restore_checklist": [
       "Open the Render dashboard for service commission-tracker-webhook.",

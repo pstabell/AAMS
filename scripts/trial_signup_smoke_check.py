@@ -671,6 +671,61 @@ def build_render_domain_attachment_commands(report: dict[str, Any]) -> dict[str,
     }
 
 
+def build_render_hostname_diagnostics(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    app_check = report["public_checks"]["app"]
+    app_headers = app_check.get("headers", {})
+    webhook_health = report["public_checks"]["webhook_health"]
+    webhook_headers = webhook_health.get("headers", {})
+    webhook_diagnostics = report["public_checks"].get("webhook_diagnostics", {})
+
+    app_attachment_state = "healthy-attached" if app_check.get("ok") else "unverified"
+    if app_headers.get("x-render-routing") == "no-server":
+        app_attachment_state = "missing-backend-attachment"
+
+    webhook_attachment_state = "unverified"
+    if webhook_headers.get("x-render-routing") == "no-server" or webhook_diagnostics.get("no_server"):
+        webhook_attachment_state = "missing-backend-attachment"
+    elif webhook_health.get("ok"):
+        webhook_attachment_state = "healthy-attached"
+
+    hostname_diagnostics = {
+        "commission-tracker-app": {
+            "host": report["app_url"].replace("https://", "").replace("http://", "").rstrip("/"),
+            "expected_service": "commission-tracker-app",
+            "probe_path": "/",
+            "status": app_check.get("status"),
+            "reason": app_check.get("reason"),
+            "server": app_headers.get("server"),
+            "x_render_origin_server": app_headers.get("x-render-origin-server"),
+            "x_render_routing": app_headers.get("x-render-routing"),
+            "attachment_state": app_attachment_state,
+            "evidence": (
+                f"HTTP {app_check.get('status')} with x-render-origin-server={app_headers.get('x-render-origin-server')}"
+                if app_headers.get("x-render-origin-server")
+                else f"HTTP {app_check.get('status')} with no Render origin header captured"
+            ),
+        },
+        "commission-tracker-webhook": {
+            "host": report["webhook_base_url"].replace("https://", "").replace("http://", "").rstrip("/"),
+            "expected_service": "commission-tracker-webhook",
+            "probe_path": "/health",
+            "status": webhook_health.get("status"),
+            "reason": webhook_health.get("reason"),
+            "server": webhook_headers.get("server"),
+            "x_render_origin_server": webhook_headers.get("x-render-origin-server"),
+            "x_render_routing": webhook_headers.get("x-render-routing"),
+            "attachment_state": webhook_attachment_state,
+            "evidence": (
+                f"HTTP {webhook_health.get('status')} with x-render-routing={webhook_headers.get('x-render-routing')}"
+                if webhook_headers.get("x-render-routing")
+                else f"HTTP {webhook_health.get('status')} with no Render routing header captured"
+            ),
+        },
+    }
+
+    return hostname_diagnostics
+
+
 def build_blockers_and_actions(report: dict[str, Any], missing_required: list[str]) -> tuple[list[str], list[str], list[str], list[str], list[str], dict[str, Any]]:
     blockers: list[str] = []
     actions: list[str] = []
@@ -779,6 +834,7 @@ def generate_report() -> dict[str, Any]:
     render_service_env_commands = build_render_service_env_commands(render_service_env_gap)
     render_service_contract_commands = build_render_service_contract_commands()
     render_domain_attachment_commands = build_render_domain_attachment_commands(report)
+    render_hostname_diagnostics = build_render_hostname_diagnostics(report)
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -801,6 +857,7 @@ def generate_report() -> dict[str, Any]:
         "render_service_env_commands": render_service_env_commands,
         "render_service_contract_commands": render_service_contract_commands,
         "render_domain_attachment_commands": render_domain_attachment_commands,
+        "render_hostname_diagnostics": render_hostname_diagnostics,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
@@ -932,6 +989,23 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         lines.append(f"- {service_name}:")
         for command in commands:
             lines.append(f"  - {command}")
+
+    lines.extend(["", "## Render hostname diagnostics"])
+    for service_name, details in summary["render_hostname_diagnostics"].items():
+        lines.append(
+            "- {}: host={}; expected_service={}; probe_path={}; attachment_state={}; status={} {}; x-render-origin-server={}; x-render-routing={}; evidence={}".format(
+                service_name,
+                details.get("host"),
+                details.get("expected_service"),
+                details.get("probe_path"),
+                details.get("attachment_state"),
+                details.get("status"),
+                details.get("reason"),
+                details.get("x_render_origin_server") or "None",
+                details.get("x_render_routing") or "None",
+                details.get("evidence"),
+            )
+        )
 
     lines.extend(
         [

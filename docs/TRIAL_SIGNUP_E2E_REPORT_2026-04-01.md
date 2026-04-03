@@ -139,9 +139,10 @@ It now also emits `render_restore_validation_commands` in both JSON and Markdown
 It now also emits `local_webhook_dependency_commands` in both JSON and Markdown output so anyone verifying parity locally gets exact install and recheck commands when Flask or Stripe are missing from the shell.
 
 ## Latest refresh
-- Added per-service Render domain attachment commands to the smoke-check summary so ops can verify the actual failing layer directly in the Render dashboard: which service owns `commission-tracker-app.onrender.com` and `commission-tracker-webhook.onrender.com`, plus the exact curl probes to rerun after reattachment.
-- Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` so the JSON and Markdown artifacts now include `render_domain_attachment_commands` alongside the existing env-gap and service-contract handoff sections.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 169/169
+- Added a Render hostname diagnostics matrix to the smoke-check summary so ops can see, in one section, which public hostname is healthy and which one is missing a backend attachment.
+- Updated `scripts/trial_signup_smoke_check.py` and `test_trial_signup_smoke_check.py` so the JSON and Markdown artifacts now include `render_hostname_diagnostics` alongside the existing domain-attachment, env-gap, and service-contract handoff sections.
+- Fresh evidence now explicitly classifies `commission-tracker-app.onrender.com` as `healthy-attached` with `x-render-origin-server=TornadoServer/6.5.5`, while `commission-tracker-webhook.onrender.com` is classified as `missing-backend-attachment` with `HTTP 404` and `x-render-routing=no-server` on `/health`.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 170/170
 - Fresh artifacts:
   - `docs/smoke-checks/latest-trial-signup-smoke-check.json`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.md`

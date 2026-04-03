@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-03T09:15:52.318646+00:00
+Generated at: 2026-04-03T11:16:58.891254+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -111,6 +111,10 @@ PY
   - Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.
   - curl -I https://commission-tracker-webhook.onrender.com/health
   - If Render still returns x-render-routing=no-server, remove any stale domain attachment and reattach the webhook hostname to commission-tracker-webhook before redeploying.
+
+## Render hostname diagnostics
+- commission-tracker-app: host=commission-tracker-app.onrender.com; expected_service=commission-tracker-app; probe_path=/; attachment_state=healthy-attached; status=200 OK; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; evidence=HTTP 200 with x-render-origin-server=TornadoServer/6.5.5
+- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; expected_service=commission-tracker-webhook; probe_path=/health; attachment_state=missing-backend-attachment; status=404 Not Found; x-render-origin-server=None; x-render-routing=no-server; evidence=HTTP 404 with x-render-routing=no-server
 
 ## Probe previews
 - Webhook health preview: Not Found
