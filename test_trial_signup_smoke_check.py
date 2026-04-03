@@ -255,6 +255,47 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(details["commission-tracker-webhook"]["x_render_routing"], "no-server")
         self.assertIn("HTTP 404", details["commission-tracker-webhook"]["evidence"])
 
+    def test_build_public_probe_matrix_rolls_up_each_webhook_probe(self):
+        report = {
+            "webhook_base_url": "https://commission-tracker-webhook.onrender.com",
+            "public_checks": {
+                "webhook_diagnostics": {
+                    "probed_endpoints": {
+                        "https://commission-tracker-webhook.onrender.com/": {
+                            "ok": False,
+                            "status": 404,
+                            "reason": "Not Found",
+                            "body_preview": "missing root",
+                            "headers": {
+                                "x-render-routing": "no-server",
+                                "server": "cloudflare",
+                                "content-type": "text/plain",
+                            },
+                        },
+                        "https://commission-tracker-webhook.onrender.com/health": {
+                            "ok": False,
+                            "status": 404,
+                            "reason": "Not Found",
+                            "body_preview": "missing health",
+                            "headers": {
+                                "x-render-routing": "no-server",
+                                "server": "cloudflare",
+                                "content-type": "text/plain",
+                            },
+                        },
+                    }
+                }
+            },
+        }
+
+        matrix = smoke.build_public_probe_matrix(report)
+
+        self.assertEqual(matrix[0]["path"], "/")
+        self.assertEqual(matrix[1]["path"], "/health")
+        self.assertEqual(matrix[1]["x_render_routing"], "no-server")
+        self.assertEqual(matrix[1]["server"], "cloudflare")
+        self.assertEqual(matrix[1]["body_preview"], "missing health")
+
     def test_build_render_incident_signature_isolates_external_routing_issue(self):
         report = {
             "local_checks": {
@@ -779,6 +820,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render service contract commands", markdown)
         self.assertIn("## Render domain attachment commands", markdown)
         self.assertIn("## Render hostname diagnostics", markdown)
+        self.assertIn("## Public webhook probe matrix", markdown)
         self.assertIn("## Render incident signature", markdown)
         self.assertIn("## Render support packet", markdown)
         self.assertIn("## Owner action plan", markdown)
@@ -796,6 +838,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.", markdown)
         self.assertIn("Incident type: render-webhook-routing-outage", markdown)
         self.assertIn("attachment_state=healthy-attached", markdown)
+        self.assertIn("path=/health; status=200 OK; ok=YES", markdown)
         self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
 

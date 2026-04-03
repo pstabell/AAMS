@@ -733,6 +733,34 @@ def build_render_hostname_diagnostics(report: dict[str, Any]) -> dict[str, dict[
     return hostname_diagnostics
 
 
+def build_public_probe_matrix(report: dict[str, Any]) -> list[dict[str, Any]]:
+    diagnostics = report["public_checks"]["webhook_diagnostics"]
+    rows: list[dict[str, Any]] = []
+
+    for url, result in diagnostics.get("probed_endpoints", {}).items():
+        path = "/"
+        if url.startswith(report["webhook_base_url"]):
+            path = url[len(report["webhook_base_url"]):] or "/"
+        headers = result.get("headers", {})
+        rows.append(
+            {
+                "url": url,
+                "path": path,
+                "status": result.get("status"),
+                "reason": result.get("reason"),
+                "ok": result.get("ok", False),
+                "x_render_routing": headers.get("x-render-routing"),
+                "x_render_origin_server": headers.get("x-render-origin-server"),
+                "server": headers.get("server"),
+                "content_type": headers.get("content-type"),
+                "body_preview": result.get("body_preview"),
+            }
+        )
+
+    rows.sort(key=lambda row: row["path"])
+    return rows
+
+
 def build_render_incident_signature(report: dict[str, Any], render_hostname_diagnostics: dict[str, dict[str, Any]]) -> dict[str, Any]:
     app_host = render_hostname_diagnostics["commission-tracker-app"]
     webhook_host = render_hostname_diagnostics["commission-tracker-webhook"]
@@ -1056,6 +1084,7 @@ def generate_report() -> dict[str, Any]:
     render_service_contract_commands = build_render_service_contract_commands()
     render_domain_attachment_commands = build_render_domain_attachment_commands(report)
     render_hostname_diagnostics = build_render_hostname_diagnostics(report)
+    public_probe_matrix = build_public_probe_matrix(report)
     render_incident_signature = build_render_incident_signature(report, render_hostname_diagnostics)
     render_support_packet = build_render_support_packet(
         report,
@@ -1102,6 +1131,7 @@ def generate_report() -> dict[str, Any]:
         "render_service_contract_commands": render_service_contract_commands,
         "render_domain_attachment_commands": render_domain_attachment_commands,
         "render_hostname_diagnostics": render_hostname_diagnostics,
+        "public_probe_matrix": public_probe_matrix,
         "render_incident_signature": render_incident_signature,
         "render_support_packet": render_support_packet,
         "owner_action_plan": owner_action_plan,
@@ -1253,6 +1283,22 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 details.get("x_render_origin_server") or "None",
                 details.get("x_render_routing") or "None",
                 details.get("evidence"),
+            )
+        )
+
+    lines.extend(["", "## Public webhook probe matrix"])
+    for probe in summary["public_probe_matrix"]:
+        lines.append(
+            "- path={}; status={} {}; ok={}; x-render-routing={}; x-render-origin-server={}; server={}; content-type={}; body-preview={}".format(
+                probe.get("path"),
+                probe.get("status"),
+                probe.get("reason"),
+                "YES" if probe.get("ok") else "NO",
+                probe.get("x_render_routing") or "None",
+                probe.get("x_render_origin_server") or "None",
+                probe.get("server") or "None",
+                probe.get("content_type") or "None",
+                probe.get("body_preview") or "",
             )
         )
 

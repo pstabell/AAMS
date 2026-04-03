@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T21:15:52.239896+00:00",
+  "generated_at": "2026-04-03T23:16:13.371943+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -192,9 +192,9 @@
     "app": {
       "body_preview": "<!--\n Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)\n\n Licensed under the Apache License, Version 2.0 (the \"License\");\n you may not use this file except in compliance with the License.\n You may obtain a copy of the License at\n\n     http://www.apache.org/licenses/LICENSE-2.0\n\n Unless required by applicable law or agreed to in writing, software\n distributed under the License is distributed on an \"AS IS\" BASIS,\n WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n See ",
       "headers": {
-        "cf-ray": "9e6b1754187ce603-IAD",
+        "cf-ray": "9e6bc7a01fc4ef64-IAD",
         "content-type": "text/html",
-        "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+        "date": "Fri, 03 Apr 2026 23:16:13 GMT",
         "server": "cloudflare",
         "x-render-origin-server": "TornadoServer/6.5.5"
       },
@@ -212,9 +212,9 @@
         "https://commission-tracker-webhook.onrender.com/": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e6b1755bfbe5813-IAD",
+            "cf-ray": "9e6bc7a1adab05ee-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+            "date": "Fri, 03 Apr 2026 23:16:13 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -225,9 +225,9 @@
         "https://commission-tracker-webhook.onrender.com/health": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e6b17567981d6b0-IAD",
+            "cf-ray": "9e6bc7a2fa1582e4-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+            "date": "Fri, 03 Apr 2026 23:16:14 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -238,9 +238,9 @@
         "https://commission-tracker-webhook.onrender.com/stripe-webhook": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e6b1758fbdfe645-IAD",
+            "cf-ray": "9e6bc7a50bd4c9b4-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Fri, 03 Apr 2026 21:15:53 GMT",
+            "date": "Fri, 03 Apr 2026 23:16:14 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -251,9 +251,9 @@
         "https://commission-tracker-webhook.onrender.com/test": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e6b1757fdebda52-IAD",
+            "cf-ray": "9e6bc7a43db6e5f0-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Fri, 03 Apr 2026 21:15:53 GMT",
+            "date": "Fri, 03 Apr 2026 23:16:14 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -269,9 +269,9 @@
     "webhook_health": {
       "body_preview": "Not Found\n",
       "headers": {
-        "cf-ray": "9e6b17550cc32996-IAD",
+        "cf-ray": "9e6bc7a0d9e3d69b-IAD",
         "content-type": "text/plain; charset=utf-8",
-        "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+        "date": "Fri, 03 Apr 2026 23:16:13 GMT",
         "server": "cloudflare",
         "x-render-routing": "no-server"
       },
@@ -327,6 +327,56 @@
       ]
     },
     "public_app_ok": true,
+    "public_probe_matrix": [
+      {
+        "body_preview": "Not Found\n",
+        "content_type": "text/plain; charset=utf-8",
+        "ok": false,
+        "path": "/",
+        "reason": "Not Found",
+        "server": "cloudflare",
+        "status": 404,
+        "url": "https://commission-tracker-webhook.onrender.com/",
+        "x_render_origin_server": null,
+        "x_render_routing": "no-server"
+      },
+      {
+        "body_preview": "Not Found\n",
+        "content_type": "text/plain; charset=utf-8",
+        "ok": false,
+        "path": "/health",
+        "reason": "Not Found",
+        "server": "cloudflare",
+        "status": 404,
+        "url": "https://commission-tracker-webhook.onrender.com/health",
+        "x_render_origin_server": null,
+        "x_render_routing": "no-server"
+      },
+      {
+        "body_preview": "Not Found\n",
+        "content_type": "text/plain; charset=utf-8",
+        "ok": false,
+        "path": "/stripe-webhook",
+        "reason": "Not Found",
+        "server": "cloudflare",
+        "status": 404,
+        "url": "https://commission-tracker-webhook.onrender.com/stripe-webhook",
+        "x_render_origin_server": null,
+        "x_render_routing": "no-server"
+      },
+      {
+        "body_preview": "Not Found\n",
+        "content_type": "text/plain; charset=utf-8",
+        "ok": false,
+        "path": "/test",
+        "reason": "Not Found",
+        "server": "cloudflare",
+        "status": 404,
+        "url": "https://commission-tracker-webhook.onrender.com/test",
+        "x_render_origin_server": null,
+        "x_render_routing": "no-server"
+      }
+    ],
     "public_webhook_all_probed_endpoints_404": true,
     "public_webhook_any_endpoint_ok": false,
     "public_webhook_likely_cause": "Render is reporting x-render-routing=no-server for the webhook hostname. That usually means there is no healthy backend service attached to this route yet or the service is not deployed behind the expected domain.",
@@ -349,7 +399,7 @@
         "If Render still returns x-render-routing=no-server, remove any stale domain attachment and reattach the webhook hostname to commission-tracker-webhook before redeploying."
       ]
     },
-    "render_escalation_message": "Render support request for AMS-APP webhook routing outage.\nGenerated at 2026-04-03T21:15:52.239896+00:00.\nRepo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.\nHealthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.\nBroken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.\nRequested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.\nRecommended recovery steps:\n- 1. Render dashboard: open commission-tracker-webhook first because the smoke check isolated the incident to the webhook hostname, not the main app.\n- 2. Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook while commission-tracker-app.onrender.com remains attached to commission-tracker-app.\n- 3. If the webhook hostname is missing or attached to the wrong service, remove the stale attachment, reattach it to commission-tracker-webhook, and save.\n- 4. Build & Deploy: confirm the deployed start command is gunicorn webhook_server:app --bind 0.0.0.0:${PORT} and trigger a manual deploy if Render has stale runtime state.\n- 5. Wait for Render to report a healthy instance, then probe /health again before attempting any Stripe flow.\n- 6. Load the missing webhook runtime values in Render or the verification shell: APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_KEY\n- 7. Before the real signup test, load the remaining live E2E secrets into the verification shell: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY\n- 8. Re-run python3 scripts/trial_signup_smoke_check.py and only run a real Stripe test-mode signup after ready_for_live_e2e flips to true.",
+    "render_escalation_message": "Render support request for AMS-APP webhook routing outage.\nGenerated at 2026-04-03T23:16:13.371943+00:00.\nRepo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.\nHealthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.\nBroken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.\nRequested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.\nRecommended recovery steps:\n- 1. Render dashboard: open commission-tracker-webhook first because the smoke check isolated the incident to the webhook hostname, not the main app.\n- 2. Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook while commission-tracker-app.onrender.com remains attached to commission-tracker-app.\n- 3. If the webhook hostname is missing or attached to the wrong service, remove the stale attachment, reattach it to commission-tracker-webhook, and save.\n- 4. Build & Deploy: confirm the deployed start command is gunicorn webhook_server:app --bind 0.0.0.0:${PORT} and trigger a manual deploy if Render has stale runtime state.\n- 5. Wait for Render to report a healthy instance, then probe /health again before attempting any Stripe flow.\n- 6. Load the missing webhook runtime values in Render or the verification shell: APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_KEY\n- 7. Before the real signup test, load the remaining live E2E secrets into the verification shell: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY\n- 8. Re-run python3 scripts/trial_signup_smoke_check.py and only run a real Stripe test-mode signup after ready_for_live_e2e flips to true.",
     "render_hostname_diagnostics": {
       "commission-tracker-app": {
         "attachment_state": "healthy-attached",
@@ -497,12 +547,12 @@
     "render_support_packet": {
       "conclusion": "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.",
       "external_routing_issue": true,
-      "generated_at": "2026-04-03T21:15:52.239896+00:00",
+      "generated_at": "2026-04-03T23:16:13.371943+00:00",
       "host_comparison": {
         "commission-tracker-app": {
           "attachment_state": "healthy-attached",
-          "cf_ray": "9e6b1754187ce603-IAD",
-          "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+          "cf_ray": "9e6bc7a01fc4ef64-IAD",
+          "date": "Fri, 03 Apr 2026 23:16:13 GMT",
           "host": "commission-tracker-app.onrender.com",
           "probe_path": "/",
           "reason": "OK",
@@ -512,8 +562,8 @@
         },
         "commission-tracker-webhook": {
           "attachment_state": "missing-backend-attachment",
-          "cf_ray": "9e6b17550cc32996-IAD",
-          "date": "Fri, 03 Apr 2026 21:15:52 GMT",
+          "cf_ray": "9e6bc7a0d9e3d69b-IAD",
+          "date": "Fri, 03 Apr 2026 23:16:13 GMT",
           "host": "commission-tracker-webhook.onrender.com",
           "probe_path": "/health",
           "reason": "Not Found",

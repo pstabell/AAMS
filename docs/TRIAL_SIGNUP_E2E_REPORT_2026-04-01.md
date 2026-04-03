@@ -9,10 +9,10 @@
 Validate the solo-agent trial signup path from signup form through Stripe checkout configuration, account provisioning webhook behavior, and onboarding email path.
 
 ## Latest Update
-- 2026-04-03 5:15 PM ET: Added an `owner_action_plan` to `scripts/trial_signup_smoke_check.py` and refreshed `docs/smoke-checks/latest-trial-signup-smoke-check.json` and `.md`.
-- The smoke-check summary now splits the handoff into owner-specific next steps for Traction, Render support, and the verification shell, so the outage can be forwarded without rewriting the evidence or losing the final live-test prerequisites.
-- Fresh live evidence still isolates the outage to external Render routing and domain binding, not repo-side code drift: `commission-tracker-app.onrender.com` returns HTTP 200 with `x-render-origin-server: TornadoServer/6.5.5`, while `commission-tracker-webhook.onrender.com/health` returns HTTP 404 with `x-render-routing: no-server`.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 176/176.
+- 2026-04-03 7:16 PM ET: Added a `public_probe_matrix` to `scripts/trial_signup_smoke_check.py` and refreshed `docs/smoke-checks/latest-trial-signup-smoke-check.json` and `.md`.
+- The smoke-check summary now emits one compact matrix row per probed webhook path so ops can see `/`, `/health`, `/test`, and `/stripe-webhook` status, Render routing header, origin header, server header, content type, and body preview without digging through raw JSON.
+- Fresh live evidence still isolates the outage to external Render routing and domain binding, not repo-side code drift: `commission-tracker-app.onrender.com` returns HTTP 200 with `x-render-origin-server: TornadoServer/6.5.5`, while every probed webhook path still returns HTTP 404 with `x-render-routing: no-server`.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 177/177.
 
 ## What Was Verified
 
