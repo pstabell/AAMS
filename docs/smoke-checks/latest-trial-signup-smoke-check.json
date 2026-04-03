@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-03T15:16:07.839779+00:00",
+  "generated_at": "2026-04-03T17:16:12.201525+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -192,7 +192,9 @@
     "app": {
       "body_preview": "<!--\n Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)\n\n Licensed under the Apache License, Version 2.0 (the \"License\");\n you may not use this file except in compliance with the License.\n You may obtain a copy of the License at\n\n     http://www.apache.org/licenses/LICENSE-2.0\n\n Unless required by applicable law or agreed to in writing, software\n distributed under the License is distributed on an \"AS IS\" BASIS,\n WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n See ",
       "headers": {
+        "cf-ray": "9e69b840bbb238fe-IAD",
         "content-type": "text/html",
+        "date": "Fri, 03 Apr 2026 17:16:12 GMT",
         "server": "cloudflare",
         "x-render-origin-server": "TornadoServer/6.5.5"
       },
@@ -210,7 +212,9 @@
         "https://commission-tracker-webhook.onrender.com/": {
           "body_preview": "Not Found\n",
           "headers": {
+            "cf-ray": "9e69b842793d1320-IAD",
             "content-type": "text/plain; charset=utf-8",
+            "date": "Fri, 03 Apr 2026 17:16:12 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -221,7 +225,9 @@
         "https://commission-tracker-webhook.onrender.com/health": {
           "body_preview": "Not Found\n",
           "headers": {
+            "cf-ray": "9e69b8436e7cc768-IAD",
             "content-type": "text/plain; charset=utf-8",
+            "date": "Fri, 03 Apr 2026 17:16:12 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -232,7 +238,9 @@
         "https://commission-tracker-webhook.onrender.com/stripe-webhook": {
           "body_preview": "Not Found\n",
           "headers": {
+            "cf-ray": "9e69b8464bd8489c-IAD",
             "content-type": "text/plain; charset=utf-8",
+            "date": "Fri, 03 Apr 2026 17:16:13 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -243,7 +251,9 @@
         "https://commission-tracker-webhook.onrender.com/test": {
           "body_preview": "Not Found\n",
           "headers": {
+            "cf-ray": "9e69b844cfa1e600-IAD",
             "content-type": "text/plain; charset=utf-8",
+            "date": "Fri, 03 Apr 2026 17:16:13 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -259,7 +269,9 @@
     "webhook_health": {
       "body_preview": "Not Found\n",
       "headers": {
+        "cf-ray": "9e69b8416ec1e6ec-IAD",
         "content-type": "text/plain; charset=utf-8",
+        "date": "Fri, 03 Apr 2026 17:16:12 GMT",
         "server": "cloudflare",
         "x-render-routing": "no-server"
       },
@@ -460,6 +472,38 @@
         "shell_ready": false,
         "start_command": "gunicorn webhook_server:app --bind 0.0.0.0:${PORT}"
       }
+    },
+    "render_support_packet": {
+      "conclusion": "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.",
+      "external_routing_issue": true,
+      "generated_at": "2026-04-03T17:16:12.201525+00:00",
+      "host_comparison": {
+        "commission-tracker-app": {
+          "attachment_state": "healthy-attached",
+          "cf_ray": "9e69b840bbb238fe-IAD",
+          "date": "Fri, 03 Apr 2026 17:16:12 GMT",
+          "host": "commission-tracker-app.onrender.com",
+          "probe_path": "/",
+          "reason": "OK",
+          "status": 200,
+          "x_render_origin_server": "TornadoServer/6.5.5",
+          "x_render_routing": null
+        },
+        "commission-tracker-webhook": {
+          "attachment_state": "missing-backend-attachment",
+          "cf_ray": "9e69b8416ec1e6ec-IAD",
+          "date": "Fri, 03 Apr 2026 17:16:12 GMT",
+          "host": "commission-tracker-webhook.onrender.com",
+          "probe_path": "/health",
+          "reason": "Not Found",
+          "status": 404,
+          "x_render_origin_server": null,
+          "x_render_routing": "no-server"
+        }
+      },
+      "incident_type": "render-webhook-routing-outage",
+      "repo_contract_ok": true,
+      "requested_action": "Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears."
     },
     "webhook_service_contract_ok": true
   },

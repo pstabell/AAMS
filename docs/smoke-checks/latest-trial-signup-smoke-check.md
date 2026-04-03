@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-03T15:16:07.839779+00:00
+Generated at: 2026-04-03T17:16:12.201525+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -122,6 +122,12 @@ PY
 - Webhook host attachment state: missing-backend-attachment
 - External routing issue isolated: YES
 - Conclusion: Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.
+
+## Render support packet
+- Incident type: render-webhook-routing-outage
+- Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.
+- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e69b840bbb238fe-IAD; date=Fri, 03 Apr 2026 17:16:12 GMT
+- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e69b8416ec1e6ec-IAD; date=Fri, 03 Apr 2026 17:16:12 GMT
 
 ## Render recovery playbook
 - 1. Render dashboard: open commission-tracker-webhook first because the smoke check isolated the incident to the webhook hostname, not the main app.

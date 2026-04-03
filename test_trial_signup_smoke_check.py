@@ -276,6 +276,59 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(details["webhook_host_attachment_state"], "missing-backend-attachment")
         self.assertIn("external Render service or domain binding problem", details["conclusion"])
 
+    def test_build_render_support_packet_captures_host_asymmetry_and_probe_headers(self):
+        report = {
+            "generated_at": "2026-04-03T17:14:00+00:00",
+            "public_checks": {
+                "app": {
+                    "status": 200,
+                    "reason": "OK",
+                    "headers": {
+                        "x-render-origin-server": "TornadoServer/6.5.5",
+                        "cf-ray": "app-ray",
+                        "date": "Fri, 03 Apr 2026 17:14:00 GMT",
+                    },
+                },
+                "webhook_health": {
+                    "status": 404,
+                    "reason": "Not Found",
+                    "headers": {
+                        "x-render-routing": "no-server",
+                        "cf-ray": "webhook-ray",
+                        "date": "Fri, 03 Apr 2026 17:14:01 GMT",
+                    },
+                },
+            },
+        }
+        hostname_diagnostics = {
+            "commission-tracker-app": {
+                "host": "commission-tracker-app.onrender.com",
+                "probe_path": "/",
+                "attachment_state": "healthy-attached",
+            },
+            "commission-tracker-webhook": {
+                "host": "commission-tracker-webhook.onrender.com",
+                "probe_path": "/health",
+                "attachment_state": "missing-backend-attachment",
+            },
+        }
+        incident_signature = {
+            "conclusion": "External Render service or domain binding problem.",
+            "repo_contract_ok": True,
+            "external_routing_issue": True,
+        }
+
+        packet = smoke.build_render_support_packet(report, hostname_diagnostics, incident_signature)
+
+        self.assertEqual(packet["incident_type"], "render-webhook-routing-outage")
+        self.assertTrue(packet["repo_contract_ok"])
+        self.assertTrue(packet["external_routing_issue"])
+        self.assertEqual(packet["host_comparison"]["commission-tracker-app"]["x_render_origin_server"], "TornadoServer/6.5.5")
+        self.assertEqual(packet["host_comparison"]["commission-tracker-app"]["cf_ray"], "app-ray")
+        self.assertEqual(packet["host_comparison"]["commission-tracker-webhook"]["x_render_routing"], "no-server")
+        self.assertEqual(packet["host_comparison"]["commission-tracker-webhook"]["cf_ray"], "webhook-ray")
+        self.assertIn("Confirm the webhook hostname is attached", packet["requested_action"])
+
     def test_build_render_recovery_playbook_prioritizes_webhook_attachment_when_incident_is_isolated(self):
         report = {
             "app_url": "https://commission-tracker-app.onrender.com",
@@ -646,6 +699,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render domain attachment commands", markdown)
         self.assertIn("## Render hostname diagnostics", markdown)
         self.assertIn("## Render incident signature", markdown)
+        self.assertIn("## Render support packet", markdown)
         self.assertIn("## Render recovery playbook", markdown)
         self.assertIn("External routing issue isolated: NO", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
@@ -653,6 +707,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("Run one real Stripe test-mode signup", markdown)
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Build & Deploy: confirm startCommand='gunicorn webhook_server:app --bind 0.0.0.0:${PORT}'", markdown)
         self.assertIn("Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.", markdown)
+        self.assertIn("Incident type: render-webhook-routing-outage", markdown)
         self.assertIn("attachment_state=healthy-attached", markdown)
         self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
@@ -685,6 +740,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             payload["summary"]["render_domain_attachment_commands"]["commission-tracker-webhook"],
         )
         self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-app"]["attachment_state"], "healthy-attached")
+        self.assertEqual(payload["summary"]["render_support_packet"]["incident_type"], "render-webhook-routing-outage")
         self.assertTrue(payload["summary"]["render_incident_signature"]["repo_contract_ok"])
         self.assertFalse(payload["summary"]["render_incident_signature"]["external_routing_issue"])
         self.assertIn("Review both Render services together", payload["summary"]["render_recovery_playbook"][0])

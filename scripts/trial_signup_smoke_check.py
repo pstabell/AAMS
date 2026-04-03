@@ -117,7 +117,14 @@ RENDER_BLUEPRINT_SERVICES = {
 def _extract_response_headers(response: Any) -> dict[str, str]:
     headers = getattr(response, "headers", {})
     extracted = {}
-    for key in ("x-render-routing", "x-render-origin-server", "server", "content-type"):
+    for key in (
+        "x-render-routing",
+        "x-render-origin-server",
+        "server",
+        "content-type",
+        "cf-ray",
+        "date",
+    ):
         value = headers.get(key)
         if value:
             extracted[key] = value
@@ -762,6 +769,52 @@ def build_render_incident_signature(report: dict[str, Any], render_hostname_diag
     }
 
 
+def build_render_support_packet(
+    report: dict[str, Any],
+    render_hostname_diagnostics: dict[str, dict[str, Any]],
+    render_incident_signature: dict[str, Any],
+) -> dict[str, Any]:
+    app_probe = report["public_checks"]["app"]
+    webhook_probe = report["public_checks"]["webhook_health"]
+    app_host = render_hostname_diagnostics["commission-tracker-app"]
+    webhook_host = render_hostname_diagnostics["commission-tracker-webhook"]
+
+    return {
+        "incident_type": "render-webhook-routing-outage",
+        "generated_at": report["generated_at"],
+        "conclusion": render_incident_signature["conclusion"],
+        "repo_contract_ok": render_incident_signature["repo_contract_ok"],
+        "external_routing_issue": render_incident_signature["external_routing_issue"],
+        "host_comparison": {
+            "commission-tracker-app": {
+                "host": app_host["host"],
+                "probe_path": app_host["probe_path"],
+                "status": app_probe.get("status"),
+                "reason": app_probe.get("reason"),
+                "attachment_state": app_host.get("attachment_state"),
+                "x_render_origin_server": app_probe.get("headers", {}).get("x-render-origin-server"),
+                "x_render_routing": app_probe.get("headers", {}).get("x-render-routing"),
+                "cf_ray": app_probe.get("headers", {}).get("cf-ray"),
+                "date": app_probe.get("headers", {}).get("date"),
+            },
+            "commission-tracker-webhook": {
+                "host": webhook_host["host"],
+                "probe_path": webhook_host["probe_path"],
+                "status": webhook_probe.get("status"),
+                "reason": webhook_probe.get("reason"),
+                "attachment_state": webhook_host.get("attachment_state"),
+                "x_render_origin_server": webhook_probe.get("headers", {}).get("x-render-origin-server"),
+                "x_render_routing": webhook_probe.get("headers", {}).get("x-render-routing"),
+                "cf_ray": webhook_probe.get("headers", {}).get("cf-ray"),
+                "date": webhook_probe.get("headers", {}).get("date"),
+            },
+        },
+        "requested_action": (
+            "Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears."
+        ),
+    }
+
+
 def build_render_recovery_playbook(
     report: dict[str, Any],
     render_incident_signature: dict[str, Any],
@@ -921,6 +974,11 @@ def generate_report() -> dict[str, Any]:
     render_domain_attachment_commands = build_render_domain_attachment_commands(report)
     render_hostname_diagnostics = build_render_hostname_diagnostics(report)
     render_incident_signature = build_render_incident_signature(report, render_hostname_diagnostics)
+    render_support_packet = build_render_support_packet(
+        report,
+        render_hostname_diagnostics,
+        render_incident_signature,
+    )
     render_recovery_playbook = build_render_recovery_playbook(
         report,
         render_incident_signature,
@@ -951,6 +1009,7 @@ def generate_report() -> dict[str, Any]:
         "render_domain_attachment_commands": render_domain_attachment_commands,
         "render_hostname_diagnostics": render_hostname_diagnostics,
         "render_incident_signature": render_incident_signature,
+        "render_support_packet": render_support_packet,
         "render_recovery_playbook": render_recovery_playbook,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
@@ -1111,6 +1170,31 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             f"- Webhook host attachment state: {incident['webhook_host_attachment_state']}",
             f"- External routing issue isolated: {'YES' if incident['external_routing_issue'] else 'NO'}",
             f"- Conclusion: {incident['conclusion']}",
+            "",
+            "## Render support packet",
+        ]
+    )
+    support_packet = summary["render_support_packet"]
+    lines.append(f"- Incident type: {support_packet['incident_type']}")
+    lines.append(f"- Requested action: {support_packet['requested_action']}")
+    for service_name, details in support_packet["host_comparison"].items():
+        lines.append(
+            "- {}: host={}; probe_path={}; status={} {}; attachment_state={}; x-render-origin-server={}; x-render-routing={}; cf-ray={}; date={}".format(
+                service_name,
+                details.get("host"),
+                details.get("probe_path"),
+                details.get("status"),
+                details.get("reason"),
+                details.get("attachment_state"),
+                details.get("x_render_origin_server") or "None",
+                details.get("x_render_routing") or "None",
+                details.get("cf_ray") or "None",
+                details.get("date") or "None",
+            )
+        )
+
+    lines.extend(
+        [
             "",
             "## Render recovery playbook",
         ]
