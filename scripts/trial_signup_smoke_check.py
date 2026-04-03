@@ -815,6 +815,37 @@ def build_render_support_packet(
     }
 
 
+def build_render_escalation_message(
+    report: dict[str, Any],
+    render_support_packet: dict[str, Any],
+    render_recovery_playbook: list[str],
+) -> str:
+    app_host = render_support_packet["host_comparison"]["commission-tracker-app"]
+    webhook_host = render_support_packet["host_comparison"]["commission-tracker-webhook"]
+
+    lines = [
+        "Render support request for AMS-APP webhook routing outage.",
+        f"Generated at {report['generated_at']}.",
+        render_support_packet["conclusion"],
+        (
+            "Healthy app host evidence: "
+            f"{app_host['host']}{app_host['probe_path']} -> HTTP {app_host['status']} {app_host['reason']} "
+            f"with attachment_state={app_host['attachment_state']} and "
+            f"x-render-origin-server={app_host.get('x_render_origin_server') or 'None'}."
+        ),
+        (
+            "Broken webhook host evidence: "
+            f"{webhook_host['host']}{webhook_host['probe_path']} -> HTTP {webhook_host['status']} {webhook_host['reason']} "
+            f"with attachment_state={webhook_host['attachment_state']} and "
+            f"x-render-routing={webhook_host.get('x_render_routing') or 'None'}."
+        ),
+        "Requested action: " + render_support_packet["requested_action"],
+        "Recommended recovery steps:",
+    ]
+    lines.extend(f"- {step}" for step in render_recovery_playbook)
+    return "\n".join(lines)
+
+
 def build_render_recovery_playbook(
     report: dict[str, Any],
     render_incident_signature: dict[str, Any],
@@ -985,6 +1016,11 @@ def generate_report() -> dict[str, Any]:
         render_service_env_gap,
         missing_required,
     )
+    render_escalation_message = build_render_escalation_message(
+        report,
+        render_support_packet,
+        render_recovery_playbook,
+    )
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -1011,6 +1047,7 @@ def generate_report() -> dict[str, Any]:
         "render_incident_signature": render_incident_signature,
         "render_support_packet": render_support_packet,
         "render_recovery_playbook": render_recovery_playbook,
+        "render_escalation_message": render_escalation_message,
         "ready_for_live_e2e": (
             report["public_checks"]["app"]["ok"]
             and report["public_checks"]["webhook_health"]["ok"]
@@ -1203,6 +1240,9 @@ def render_markdown_report(report: dict[str, Any]) -> str:
 
     lines.extend(
         [
+            "",
+            "## Render escalation message",
+            summary["render_escalation_message"] or "None",
             "",
             "## Probe previews",
             f"- Webhook health preview: {health_probe.get('body_preview', '')}",

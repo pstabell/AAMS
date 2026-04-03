@@ -9,10 +9,10 @@
 Validate the solo-agent trial signup path from signup form through Stripe checkout configuration, account provisioning webhook behavior, and onboarding email path.
 
 ## Latest Update
-- 2026-04-03 1:16 PM ET: Added a Render support packet to `scripts/trial_signup_smoke_check.py` and pushed a fresh smoke snapshot to `docs/smoke-checks/latest-trial-signup-smoke-check.json` and `.md`.
-- The smoke-check summary now emits a copy-ready `render_support_packet` with exact host comparison evidence for both public Render hostnames, including HTTP status, attachment state, `x-render-origin-server`, `x-render-routing`, Cloudflare `cf-ray`, and response `date` headers.
+- 2026-04-03 3:15 PM ET: Added a copy-ready `render_escalation_message` to `scripts/trial_signup_smoke_check.py` and refreshed `docs/smoke-checks/latest-trial-signup-smoke-check.json` and `.md`.
+- The smoke-check summary now emits a single ready-to-forward escalation body that rolls up the Render support packet, the app-versus-webhook hostname evidence, the requested action, and the ordered recovery playbook in plain text.
 - Fresh live evidence still isolates the outage to external Render routing and domain binding, not repo-side code drift: `commission-tracker-app.onrender.com` returns HTTP 200 with `x-render-origin-server: TornadoServer/6.5.5`, while `commission-tracker-webhook.onrender.com/health` returns HTTP 404 with `x-render-routing: no-server`.
-- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 174/174.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 175/175.
 
 ## What Was Verified
 

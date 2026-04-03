@@ -329,6 +329,47 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(packet["host_comparison"]["commission-tracker-webhook"]["cf_ray"], "webhook-ray")
         self.assertIn("Confirm the webhook hostname is attached", packet["requested_action"])
 
+    def test_build_render_escalation_message_rolls_up_support_packet_and_playbook(self):
+        report = {
+            "generated_at": "2026-04-03T17:14:00+00:00",
+        }
+        support_packet = {
+            "conclusion": "External Render service or domain binding problem.",
+            "requested_action": "Confirm the webhook hostname is attached to commission-tracker-webhook.",
+            "host_comparison": {
+                "commission-tracker-app": {
+                    "host": "commission-tracker-app.onrender.com",
+                    "probe_path": "/",
+                    "status": 200,
+                    "reason": "OK",
+                    "attachment_state": "healthy-attached",
+                    "x_render_origin_server": "TornadoServer/6.5.5",
+                },
+                "commission-tracker-webhook": {
+                    "host": "commission-tracker-webhook.onrender.com",
+                    "probe_path": "/health",
+                    "status": 404,
+                    "reason": "Not Found",
+                    "attachment_state": "missing-backend-attachment",
+                    "x_render_routing": "no-server",
+                },
+            },
+        }
+        playbook = [
+            "1. Open commission-tracker-webhook in Render.",
+            "2. Reattach the webhook hostname and redeploy.",
+        ]
+
+        message = smoke.build_render_escalation_message(report, support_packet, playbook)
+
+        self.assertIn("Render support request for AMS-APP webhook routing outage.", message)
+        self.assertIn("Generated at 2026-04-03T17:14:00+00:00.", message)
+        self.assertIn("commission-tracker-app.onrender.com/ -> HTTP 200 OK", message)
+        self.assertIn("commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found", message)
+        self.assertIn("x-render-routing=no-server", message)
+        self.assertIn("Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook.", message)
+        self.assertIn("- 1. Open commission-tracker-webhook in Render.", message)
+
     def test_build_render_recovery_playbook_prioritizes_webhook_attachment_when_incident_is_isolated(self):
         report = {
             "app_url": "https://commission-tracker-app.onrender.com",
@@ -701,6 +742,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render incident signature", markdown)
         self.assertIn("## Render support packet", markdown)
         self.assertIn("## Render recovery playbook", markdown)
+        self.assertIn("## Render escalation message", markdown)
+        self.assertIn("Render support request for AMS-APP webhook routing outage.", markdown)
         self.assertIn("External routing issue isolated: NO", markdown)
         self.assertIn("Open the Render dashboard for service commission-tracker-webhook.", markdown)
         self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
@@ -741,6 +784,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         )
         self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-app"]["attachment_state"], "healthy-attached")
         self.assertEqual(payload["summary"]["render_support_packet"]["incident_type"], "render-webhook-routing-outage")
+        self.assertIn("Render support request for AMS-APP webhook routing outage.", payload["summary"]["render_escalation_message"])
         self.assertTrue(payload["summary"]["render_incident_signature"]["repo_contract_ok"])
         self.assertFalse(payload["summary"]["render_incident_signature"]["external_routing_issue"])
         self.assertIn("Review both Render services together", payload["summary"]["render_recovery_playbook"][0])
