@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-04T05:16:31.376049+00:00
+Generated at: 2026-04-04T07:16:21.620982+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -126,10 +126,17 @@ PY
 - path=/test; status=404 Not Found; ok=NO; x-render-routing=no-server; x-render-origin-server=None; server=cloudflare; content-type=text/plain; charset=utf-8; body-preview=Not Found
 
 
+## Public probe commands
+- curl -i https://commission-tracker-app.onrender.com
+- curl -i https://commission-tracker-webhook.onrender.com/
+- curl -i https://commission-tracker-webhook.onrender.com/health
+- curl -i https://commission-tracker-webhook.onrender.com/stripe-webhook
+- curl -i https://commission-tracker-webhook.onrender.com/test
+
 ## Change summary versus previous smoke check
-- Previous artifact generated at: 2026-04-04T05:16:03.327956+00:00
+- Previous artifact generated at: 2026-04-04T05:16:31.376049+00:00
 - Material change detected: NO
-- Unchanged blocked streak: 1
+- Unchanged blocked streak: 2
 - No material change detected versus the previous smoke-check artifact.
 
 ## Render incident signature
@@ -142,14 +149,14 @@ PY
 ## Render support packet
 - Incident type: render-webhook-routing-outage
 - Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.
-- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6dd7688b9f058b-IAD; date=Sat, 04 Apr 2026 05:16:31 GMT
-- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6dd768ff95d673-IAD; date=Sat, 04 Apr 2026 05:16:31 GMT
+- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6e86f3dd2de76c-IAD; date=Sat, 04 Apr 2026 07:16:21 GMT
+- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6e86f45d66c950-IAD; date=Sat, 04 Apr 2026 07:16:22 GMT
 
 ## Escalation recommendation
 - Severity: high
 - Owner: Traction
 - Destination: Render support
-- Unchanged blocked streak: 1
+- Unchanged blocked streak: 2
 - Urgency: Escalate now. The outage repeated with no material recovery since the previous smoke check.
 - Prerequisite: Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
 - Recommended message: Traction should escalate to Render support. Escalate now. The outage repeated with no material recovery since the previous smoke check. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
@@ -183,7 +190,7 @@ PY
 
 ## Render escalation message
 Render support request for AMS-APP webhook routing outage.
-Generated at 2026-04-04T05:16:31.376049+00:00.
+Generated at 2026-04-04T07:16:21.620982+00:00.
 Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.
 Healthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.
 Broken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.

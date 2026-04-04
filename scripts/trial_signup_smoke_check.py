@@ -761,6 +761,15 @@ def build_public_probe_matrix(report: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def build_public_probe_commands(report: dict[str, Any]) -> list[str]:
+    commands = [
+        f"curl -i {report['app_url']}",
+    ]
+    for probe in build_public_probe_matrix(report):
+        commands.append(f"curl -i {probe['url']}")
+    return commands
+
+
 def build_change_summary(current_report: dict[str, Any], previous_report: dict[str, Any] | None) -> dict[str, Any]:
     if not previous_report:
         return {
@@ -1197,6 +1206,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
     render_domain_attachment_commands = build_render_domain_attachment_commands(report)
     render_hostname_diagnostics = build_render_hostname_diagnostics(report)
     public_probe_matrix = build_public_probe_matrix(report)
+    public_probe_commands = build_public_probe_commands(report)
     render_incident_signature = build_render_incident_signature(report, render_hostname_diagnostics)
     render_support_packet = build_render_support_packet(
         report,
@@ -1254,6 +1264,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         "render_domain_attachment_commands": render_domain_attachment_commands,
         "render_hostname_diagnostics": render_hostname_diagnostics,
         "public_probe_matrix": public_probe_matrix,
+        "public_probe_commands": public_probe_commands,
         "render_incident_signature": render_incident_signature,
         "render_support_packet": render_support_packet,
         "owner_action_plan": owner_action_plan,
@@ -1422,6 +1433,9 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 probe.get("body_preview") or "",
             )
         )
+
+    lines.extend(["", "## Public probe commands"])
+    lines.extend(f"- {command}" for command in summary["public_probe_commands"] or ["None"])
 
     change_summary = summary["change_summary"]
     lines.extend(["", "## Change summary versus previous smoke check"])

@@ -403,6 +403,38 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(matrix[1]["server"], "cloudflare")
         self.assertEqual(matrix[1]["body_preview"], "missing health")
 
+    def test_build_public_probe_commands_lists_app_then_each_webhook_probe(self):
+        report = {
+            "app_url": "https://commission-tracker-app.onrender.com",
+            "webhook_base_url": "https://commission-tracker-webhook.onrender.com",
+            "public_checks": {
+                "webhook_diagnostics": {
+                    "probed_endpoints": {
+                        "https://commission-tracker-webhook.onrender.com/health": {
+                            "ok": False,
+                            "status": 404,
+                            "reason": "Not Found",
+                            "body_preview": "missing health",
+                            "headers": {},
+                        },
+                        "https://commission-tracker-webhook.onrender.com/": {
+                            "ok": False,
+                            "status": 404,
+                            "reason": "Not Found",
+                            "body_preview": "missing root",
+                            "headers": {},
+                        },
+                    }
+                }
+            },
+        }
+
+        commands = smoke.build_public_probe_commands(report)
+
+        self.assertEqual(commands[0], "curl -i https://commission-tracker-app.onrender.com")
+        self.assertEqual(commands[1], "curl -i https://commission-tracker-webhook.onrender.com/")
+        self.assertEqual(commands[2], "curl -i https://commission-tracker-webhook.onrender.com/health")
+
     def test_build_render_incident_signature_isolates_external_routing_issue(self):
         report = {
             "local_checks": {
@@ -977,6 +1009,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render domain attachment commands", markdown)
         self.assertIn("## Render hostname diagnostics", markdown)
         self.assertIn("## Public webhook probe matrix", markdown)
+        self.assertIn("## Public probe commands", markdown)
         self.assertIn("## Change summary versus previous smoke check", markdown)
         self.assertIn("- Unchanged blocked streak: 0", markdown)
         self.assertIn("## Render incident signature", markdown)
@@ -1000,6 +1033,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("Incident type: render-webhook-routing-outage", markdown)
         self.assertIn("attachment_state=healthy-attached", markdown)
         self.assertIn("path=/health; status=200 OK; ok=YES", markdown)
+        self.assertIn("- curl -i https://commission-tracker-app.onrender.com", markdown)
+        self.assertIn("- curl -i https://commission-tracker-webhook.onrender.com/health", markdown)
         self.assertIn("- commission-tracker-webhook: shell_ready=YES; missing_in_shell=None; missing_in_blueprint=None", markdown)
         self.assertIn("- None", markdown)
 
@@ -1030,6 +1065,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             "Render dashboard -> commission-tracker-webhook -> Settings -> Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to this service.",
             payload["summary"]["render_domain_attachment_commands"]["commission-tracker-webhook"],
         )
+        self.assertEqual(payload["summary"]["public_probe_commands"][0], "curl -i https://commission-tracker-app.onrender.com")
+        self.assertIn("curl -i https://commission-tracker-webhook.onrender.com/health", payload["summary"]["public_probe_commands"])
         self.assertEqual(payload["summary"]["render_hostname_diagnostics"]["commission-tracker-app"]["attachment_state"], "healthy-attached")
         self.assertEqual(payload["summary"]["render_support_packet"]["incident_type"], "render-webhook-routing-outage")
         self.assertEqual(payload["summary"]["escalation_recommendation"]["severity"], "low")
