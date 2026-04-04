@@ -472,7 +472,12 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
             "unchanged_blocked_streak": 3,
         }
 
-        recommendation = smoke.build_escalation_recommendation(report, incident_signature, change_summary)
+        recommendation = smoke.build_escalation_recommendation(
+            report,
+            incident_signature,
+            change_summary,
+            ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
+        )
 
         self.assertEqual(recommendation["severity"], "critical")
         self.assertEqual(recommendation["owner"], "Traction")
@@ -498,7 +503,12 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
             "unchanged_blocked_streak": 0,
         }
 
-        recommendation = smoke.build_escalation_recommendation(report, incident_signature, change_summary)
+        recommendation = smoke.build_escalation_recommendation(
+            report,
+            incident_signature,
+            change_summary,
+            [],
+        )
 
         self.assertEqual(recommendation["severity"], "medium")
         self.assertEqual(recommendation["owner"], "Forge")
@@ -598,6 +608,70 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertIn("x-render-routing=no-server", message)
         self.assertIn("Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook.", message)
         self.assertIn("- 1. Open commission-tracker-webhook in Render.", message)
+
+    def test_build_render_escalation_payload_rolls_up_ticket_ready_fields(self):
+        report = {
+            "generated_at": "2026-04-04T09:14:45+00:00",
+            "summary": {
+                "missing_required_env_vars": ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
+            },
+        }
+        support_packet = {
+            "incident_type": "render-webhook-routing-outage",
+            "requested_action": "Confirm the webhook hostname is attached to commission-tracker-webhook.",
+            "host_comparison": {
+                "commission-tracker-app": {
+                    "host": "commission-tracker-app.onrender.com",
+                    "probe_path": "/",
+                    "status": 200,
+                    "reason": "OK",
+                    "attachment_state": "healthy-attached",
+                    "x_render_origin_server": "TornadoServer/6.5.5",
+                },
+                "commission-tracker-webhook": {
+                    "host": "commission-tracker-webhook.onrender.com",
+                    "probe_path": "/health",
+                    "status": 404,
+                    "reason": "Not Found",
+                    "attachment_state": "missing-backend-attachment",
+                    "x_render_routing": "no-server",
+                },
+            },
+        }
+        incident_signature = {
+            "repo_contract_ok": True,
+            "external_routing_issue": True,
+        }
+        change_summary = {
+            "unchanged_blocked_streak": 4,
+        }
+        escalation_recommendation = {
+            "severity": "critical",
+            "owner": "Traction",
+            "destination": "Render support",
+            "recommended_message": "Traction should escalate to Render support immediately.",
+        }
+
+        payload = smoke.build_render_escalation_payload(
+            report,
+            support_packet,
+            incident_signature,
+            change_summary,
+            escalation_recommendation,
+            ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
+        )
+
+        self.assertEqual(payload["ticket_title"], "AMS-APP Render webhook routing outage blocks live Stripe signup path")
+        self.assertEqual(payload["severity"], "critical")
+        self.assertEqual(payload["owner"], "Traction")
+        self.assertEqual(payload["destination"], "Render support")
+        self.assertEqual(payload["unchanged_blocked_streak"], 4)
+        self.assertTrue(payload["repo_contract_ok"])
+        self.assertTrue(payload["external_routing_issue"])
+        self.assertIn("commission-tracker-app.onrender.com/ -> HTTP 200 OK", payload["app_host_evidence"])
+        self.assertIn("commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found", payload["webhook_host_evidence"])
+        self.assertEqual(payload["missing_live_e2e_secrets"], ["STRIPE_SECRET_KEY", "RESEND_API_KEY"])
+        self.assertEqual(payload["recommended_message"], "Traction should escalate to Render support immediately.")
 
     def test_build_owner_action_plan_splits_next_steps_by_owner(self):
         report = {
@@ -1018,6 +1092,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Owner action plan", markdown)
         self.assertIn("## Render recovery playbook", markdown)
         self.assertIn("## Render escalation message", markdown)
+        self.assertIn("## Render escalation payload", markdown)
         self.assertIn("Render support request for AMS-APP webhook routing outage.", markdown)
         self.assertIn("- Severity:", markdown)
         self.assertIn("- Recommended message:", markdown)
@@ -1075,6 +1150,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("render_support", payload["summary"]["owner_action_plan"])
         self.assertIn("verification_shell", payload["summary"]["owner_action_plan"])
         self.assertIn("Render support request for AMS-APP webhook routing outage.", payload["summary"]["render_escalation_message"])
+        self.assertEqual(
+            payload["summary"]["render_escalation_payload"]["ticket_title"],
+            "AMS-APP Render webhook routing outage blocks live Stripe signup path",
+        )
         self.assertTrue(payload["summary"]["render_incident_signature"]["repo_contract_ok"])
         self.assertFalse(payload["summary"]["render_incident_signature"]["external_routing_issue"])
         self.assertIn("Review both Render services together", payload["summary"]["render_recovery_playbook"][0])

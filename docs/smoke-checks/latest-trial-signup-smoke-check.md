@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-04T07:16:21.620982+00:00
+Generated at: 2026-04-04T09:18:55.802234+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -134,10 +134,21 @@ PY
 - curl -i https://commission-tracker-webhook.onrender.com/test
 
 ## Change summary versus previous smoke check
-- Previous artifact generated at: 2026-04-04T05:16:31.376049+00:00
-- Material change detected: NO
-- Unchanged blocked streak: 2
-- No material change detected versus the previous smoke-check artifact.
+- Previous artifact generated at: 2026-04-04T09:18:03.007424+00:00
+- Material change detected: YES
+- Unchanged blocked streak: 0
+- ready_for_live_e2e changed from False to None.
+- public_webhook_no_server changed from True to None.
+- repo_contract_ok changed from True to None.
+- external_routing_issue changed from True to None.
+- Probe / status changed from 404 to None.
+- Probe / x-render-routing changed from no-server to None.
+- Probe /health status changed from 404 to None.
+- Probe /health x-render-routing changed from no-server to None.
+- Probe /stripe-webhook status changed from 404 to None.
+- Probe /stripe-webhook x-render-routing changed from no-server to None.
+- Probe /test status changed from 404 to None.
+- Probe /test x-render-routing changed from no-server to None.
 
 ## Render incident signature
 - Repo contract OK: YES
@@ -149,17 +160,17 @@ PY
 ## Render support packet
 - Incident type: render-webhook-routing-outage
 - Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.
-- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6e86f3dd2de76c-IAD; date=Sat, 04 Apr 2026 07:16:21 GMT
-- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6e86f45d66c950-IAD; date=Sat, 04 Apr 2026 07:16:22 GMT
+- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6f3a7f5bc1c946-IAD; date=Sat, 04 Apr 2026 09:18:55 GMT
+- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6f3a7fcf3fe63f-IAD; date=Sat, 04 Apr 2026 09:18:56 GMT
 
 ## Escalation recommendation
 - Severity: high
 - Owner: Traction
 - Destination: Render support
-- Unchanged blocked streak: 2
-- Urgency: Escalate now. The outage repeated with no material recovery since the previous smoke check.
+- Unchanged blocked streak: 0
+- Urgency: Escalate now. The outage is externally isolated to Render routing or domain attachment.
 - Prerequisite: Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
-- Recommended message: Traction should escalate to Render support. Escalate now. The outage repeated with no material recovery since the previous smoke check. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
+- Recommended message: Traction should escalate to Render support. Escalate now. The outage is externally isolated to Render routing or domain attachment. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
 
 ## Owner action plan
 - traction:
@@ -190,7 +201,7 @@ PY
 
 ## Render escalation message
 Render support request for AMS-APP webhook routing outage.
-Generated at 2026-04-04T07:16:21.620982+00:00.
+Generated at 2026-04-04T09:18:55.802234+00:00.
 Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.
 Healthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.
 Broken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.
@@ -204,6 +215,22 @@ Recommended recovery steps:
 - 6. Load the missing webhook runtime values in Render or the verification shell: APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_KEY
 - 7. Before the real signup test, load the remaining live E2E secrets into the verification shell: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
 - 8. Re-run python3 scripts/trial_signup_smoke_check.py and only run a real Stripe test-mode signup after ready_for_live_e2e flips to true.
+
+## Render escalation payload
+- ticket_title: AMS-APP Render webhook routing outage blocks live Stripe signup path
+- severity: high
+- owner: Traction
+- destination: Render support
+- generated_at: 2026-04-04T09:18:55.802234+00:00
+- incident_type: render-webhook-routing-outage
+- unchanged_blocked_streak: 0
+- repo_contract_ok: True
+- external_routing_issue: True
+- app_host_evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK attachment_state=healthy-attached x-render-origin-server=TornadoServer/6.5.5
+- webhook_host_evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found attachment_state=missing-backend-attachment x-render-routing=no-server
+- requested_action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.
+- recommended_message: Traction should escalate to Render support. Escalate now. The outage is externally isolated to Render routing or domain attachment. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
+- missing_live_e2e_secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY
 
 ## Probe previews
 - Webhook health preview: Not Found

@@ -867,10 +867,10 @@ def build_escalation_recommendation(
     report: dict[str, Any],
     render_incident_signature: dict[str, Any],
     change_summary: dict[str, Any],
+    missing_required: list[str],
 ) -> dict[str, Any]:
     unchanged_blocked_streak = change_summary.get("unchanged_blocked_streak", 0)
     local_webhook_ok = report["local_checks"]["webhook_health_route"]["ok"]
-    missing_required = report.get("summary", {}).get("missing_required_env_vars", [])
 
     if render_incident_signature.get("external_routing_issue"):
         owner = "Traction"
@@ -993,6 +993,41 @@ def build_render_escalation_message(
     ]
     lines.extend(f"- {step}" for step in render_recovery_playbook)
     return "\n".join(lines)
+
+
+def build_render_escalation_payload(
+    report: dict[str, Any],
+    render_support_packet: dict[str, Any],
+    render_incident_signature: dict[str, Any],
+    change_summary: dict[str, Any],
+    escalation_recommendation: dict[str, Any],
+    missing_required: list[str],
+) -> dict[str, Any]:
+    app_host = render_support_packet["host_comparison"]["commission-tracker-app"]
+    webhook_host = render_support_packet["host_comparison"]["commission-tracker-webhook"]
+
+    return {
+        "ticket_title": "AMS-APP Render webhook routing outage blocks live Stripe signup path",
+        "severity": escalation_recommendation.get("severity"),
+        "owner": escalation_recommendation.get("owner"),
+        "destination": escalation_recommendation.get("destination"),
+        "generated_at": report["generated_at"],
+        "incident_type": render_support_packet.get("incident_type"),
+        "unchanged_blocked_streak": change_summary.get("unchanged_blocked_streak", 0),
+        "repo_contract_ok": render_incident_signature.get("repo_contract_ok"),
+        "external_routing_issue": render_incident_signature.get("external_routing_issue"),
+        "app_host_evidence": (
+            f"{app_host['host']}{app_host['probe_path']} -> HTTP {app_host['status']} {app_host['reason']} "
+            f"attachment_state={app_host['attachment_state']} x-render-origin-server={app_host.get('x_render_origin_server') or 'None'}"
+        ),
+        "webhook_host_evidence": (
+            f"{webhook_host['host']}{webhook_host['probe_path']} -> HTTP {webhook_host['status']} {webhook_host['reason']} "
+            f"attachment_state={webhook_host['attachment_state']} x-render-routing={webhook_host.get('x_render_routing') or 'None'}"
+        ),
+        "requested_action": render_support_packet.get("requested_action"),
+        "missing_live_e2e_secrets": missing_required,
+        "recommended_message": escalation_recommendation.get("recommended_message"),
+    }
 
 
 def build_owner_action_plan(
@@ -1225,10 +1260,25 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         render_service_env_gap,
         missing_required,
     )
+    change_summary = build_change_summary(report, previous_report)
+    escalation_recommendation = build_escalation_recommendation(
+        report,
+        render_incident_signature,
+        change_summary,
+        missing_required,
+    )
     render_escalation_message = build_render_escalation_message(
         report,
         render_support_packet,
         render_recovery_playbook,
+    )
+    render_escalation_payload = build_render_escalation_payload(
+        report,
+        render_support_packet,
+        render_incident_signature,
+        change_summary,
+        escalation_recommendation,
+        missing_required,
     )
     ready_for_live_e2e = (
         report["public_checks"]["app"]["ok"]
@@ -1270,15 +1320,11 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         "owner_action_plan": owner_action_plan,
         "render_recovery_playbook": render_recovery_playbook,
         "render_escalation_message": render_escalation_message,
+        "render_escalation_payload": render_escalation_payload,
         "ready_for_live_e2e": ready_for_live_e2e,
+        "change_summary": change_summary,
+        "escalation_recommendation": escalation_recommendation,
     }
-    change_summary = build_change_summary(report, previous_report)
-    report["summary"]["change_summary"] = change_summary
-    report["summary"]["escalation_recommendation"] = build_escalation_recommendation(
-        report,
-        render_incident_signature,
-        change_summary,
-    )
     return report
 
 
@@ -1512,6 +1558,34 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             "",
             "## Render escalation message",
             summary["render_escalation_message"] or "None",
+            "",
+            "## Render escalation payload",
+        ]
+    )
+    payload = summary["render_escalation_payload"]
+    for key in [
+        "ticket_title",
+        "severity",
+        "owner",
+        "destination",
+        "generated_at",
+        "incident_type",
+        "unchanged_blocked_streak",
+        "repo_contract_ok",
+        "external_routing_issue",
+        "app_host_evidence",
+        "webhook_host_evidence",
+        "requested_action",
+        "recommended_message",
+    ]:
+        lines.append(f"- {key}: {payload.get(key)}")
+    lines.append(
+        "- missing_live_e2e_secrets: "
+        + (", ".join(payload.get("missing_live_e2e_secrets", [])) or "None")
+    )
+
+    lines.extend(
+        [
             "",
             "## Probe previews",
             f"- Webhook health preview: {health_probe.get('body_preview', '')}",
