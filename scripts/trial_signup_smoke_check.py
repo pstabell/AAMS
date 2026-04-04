@@ -761,6 +761,54 @@ def build_public_probe_matrix(report: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def build_change_summary(current_report: dict[str, Any], previous_report: dict[str, Any] | None) -> dict[str, Any]:
+    if not previous_report:
+        return {
+            "has_previous_report": False,
+            "status_changed": False,
+            "summary_changed": False,
+            "changes": ["No previous smoke-check artifact was available for comparison."],
+        }
+
+    changes: list[str] = []
+    current_summary = current_report.get("summary", {})
+    previous_summary = previous_report.get("summary", {})
+
+    for label, current_value, previous_value in [
+        ("public app status", current_report.get("public_checks", {}).get("app", {}).get("status"), previous_report.get("public_checks", {}).get("app", {}).get("status")),
+        ("public webhook health status", current_report.get("public_checks", {}).get("webhook_health", {}).get("status"), previous_report.get("public_checks", {}).get("webhook_health", {}).get("status")),
+        ("ready_for_live_e2e", current_summary.get("ready_for_live_e2e"), previous_summary.get("ready_for_live_e2e")),
+        ("public_webhook_no_server", current_summary.get("public_webhook_no_server"), previous_summary.get("public_webhook_no_server")),
+        ("repo_contract_ok", current_summary.get("render_incident_signature", {}).get("repo_contract_ok"), previous_summary.get("render_incident_signature", {}).get("repo_contract_ok")),
+        ("external_routing_issue", current_summary.get("render_incident_signature", {}).get("external_routing_issue"), previous_summary.get("render_incident_signature", {}).get("external_routing_issue")),
+    ]:
+        if current_value != previous_value:
+            changes.append(f"{label} changed from {previous_value} to {current_value}.")
+
+    current_matrix = {row.get("path"): row for row in current_summary.get("public_probe_matrix", [])}
+    previous_matrix = {row.get("path"): row for row in previous_summary.get("public_probe_matrix", [])}
+    all_paths = sorted(set(current_matrix) | set(previous_matrix))
+    for path in all_paths:
+        current_row = current_matrix.get(path, {})
+        previous_row = previous_matrix.get(path, {})
+        for key, label in [("status", "status"), ("x_render_routing", "x-render-routing"), ("x_render_origin_server", "x-render-origin-server")]:
+            if current_row.get(key) != previous_row.get(key):
+                changes.append(
+                    f"Probe {path} {label} changed from {previous_row.get(key)} to {current_row.get(key)}."
+                )
+
+    if not changes:
+        changes.append("No material change detected versus the previous smoke-check artifact.")
+
+    return {
+        "has_previous_report": True,
+        "previous_generated_at": previous_report.get("generated_at"),
+        "status_changed": any("status" in change for change in changes),
+        "summary_changed": changes != ["No material change detected versus the previous smoke-check artifact."],
+        "changes": changes,
+    }
+
+
 def build_render_incident_signature(report: dict[str, Any], render_hostname_diagnostics: dict[str, dict[str, Any]]) -> dict[str, Any]:
     app_host = render_hostname_diagnostics["commission-tracker-app"]
     webhook_host = render_hostname_diagnostics["commission-tracker-webhook"]
@@ -1053,7 +1101,7 @@ def build_blockers_and_actions(report: dict[str, Any], missing_required: list[st
     )
 
 
-def generate_report() -> dict[str, Any]:
+def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, Any]:
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "app_url": APP_URL,
@@ -1108,6 +1156,16 @@ def generate_report() -> dict[str, Any]:
         render_support_packet,
         render_recovery_playbook,
     )
+    ready_for_live_e2e = (
+        report["public_checks"]["app"]["ok"]
+        and report["public_checks"]["webhook_health"]["ok"]
+        and report["local_checks"]["webhook_health_route"]["ok"]
+        and report["local_checks"]["checkout_contract"]["ok"]
+        and report["local_checks"]["render_blueprint"]["ok"]
+        and report["local_checks"]["webhook_service_contract"]["ok"]
+        and not missing_required
+    )
+
     report["summary"] = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
@@ -1137,16 +1195,9 @@ def generate_report() -> dict[str, Any]:
         "owner_action_plan": owner_action_plan,
         "render_recovery_playbook": render_recovery_playbook,
         "render_escalation_message": render_escalation_message,
-        "ready_for_live_e2e": (
-            report["public_checks"]["app"]["ok"]
-            and report["public_checks"]["webhook_health"]["ok"]
-            and report["local_checks"]["webhook_health_route"]["ok"]
-            and report["local_checks"]["checkout_contract"]["ok"]
-            and report["local_checks"]["render_blueprint"]["ok"]
-            and report["local_checks"]["webhook_service_contract"]["ok"]
-            and not missing_required
-        ),
+        "ready_for_live_e2e": ready_for_live_e2e,
     }
+    report["summary"]["change_summary"] = build_change_summary(report, previous_report)
     return report
 
 
@@ -1302,6 +1353,13 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             )
         )
 
+    change_summary = summary["change_summary"]
+    lines.extend(["", "## Change summary versus previous smoke check"])
+    if change_summary.get("has_previous_report"):
+        lines.append(f"- Previous artifact generated at: {change_summary.get('previous_generated_at')}")
+    lines.append(f"- Material change detected: {'YES' if change_summary.get('summary_changed') else 'NO'}")
+    lines.extend(f"- {change}" for change in change_summary.get("changes", []) or ["None"])
+
     incident = summary["render_incident_signature"]
     lines.extend(
         [
@@ -1372,7 +1430,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    report = generate_report()
+
+    previous_report = None
+    if args.json_out:
+        json_out_path = Path(args.json_out)
+        if json_out_path.exists():
+            try:
+                previous_report = json.loads(json_out_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                previous_report = None
+
+    report = generate_report(previous_report=previous_report)
     payload = json.dumps(report, indent=2, sort_keys=True)
     print(payload)
 

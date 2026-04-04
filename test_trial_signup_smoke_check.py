@@ -255,6 +255,61 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(details["commission-tracker-webhook"]["x_render_routing"], "no-server")
         self.assertIn("HTTP 404", details["commission-tracker-webhook"]["evidence"])
 
+    def test_build_change_summary_reports_no_previous_artifact(self):
+        current_report = {"summary": {}}
+
+        summary = smoke.build_change_summary(current_report, None)
+
+        self.assertFalse(summary["has_previous_report"])
+        self.assertFalse(summary["summary_changed"])
+        self.assertEqual(summary["changes"], ["No previous smoke-check artifact was available for comparison."])
+
+    def test_build_change_summary_detects_status_and_probe_changes(self):
+        previous_report = {
+            "generated_at": "2026-04-03T23:16:00+00:00",
+            "public_checks": {
+                "app": {"status": 200},
+                "webhook_health": {"status": 404},
+            },
+            "summary": {
+                "ready_for_live_e2e": False,
+                "public_webhook_no_server": True,
+                "render_incident_signature": {
+                    "repo_contract_ok": True,
+                    "external_routing_issue": True,
+                },
+                "public_probe_matrix": [
+                    {"path": "/health", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None}
+                ],
+            },
+        }
+        current_report = {
+            "public_checks": {
+                "app": {"status": 200},
+                "webhook_health": {"status": 200},
+            },
+            "summary": {
+                "ready_for_live_e2e": True,
+                "public_webhook_no_server": False,
+                "render_incident_signature": {
+                    "repo_contract_ok": True,
+                    "external_routing_issue": False,
+                },
+                "public_probe_matrix": [
+                    {"path": "/health", "status": 200, "x_render_routing": None, "x_render_origin_server": "gunicorn"}
+                ],
+            },
+        }
+
+        summary = smoke.build_change_summary(current_report, previous_report)
+
+        self.assertTrue(summary["has_previous_report"])
+        self.assertEqual(summary["previous_generated_at"], "2026-04-03T23:16:00+00:00")
+        self.assertTrue(summary["summary_changed"])
+        self.assertTrue(any("public webhook health status changed from 404 to 200" in change for change in summary["changes"]))
+        self.assertTrue(any("Probe /health status changed from 404 to 200" in change for change in summary["changes"]))
+        self.assertTrue(any("Probe /health x-render-routing changed from no-server to None" in change for change in summary["changes"]))
+
     def test_build_public_probe_matrix_rolls_up_each_webhook_probe(self):
         report = {
             "webhook_base_url": "https://commission-tracker-webhook.onrender.com",

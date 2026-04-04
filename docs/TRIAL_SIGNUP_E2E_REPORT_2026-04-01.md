@@ -155,6 +155,7 @@ It now also emits `local_webhook_dependency_commands` in both JSON and Markdown 
   - `docs/smoke-checks/latest-trial-signup-smoke-check.json`
   - `docs/smoke-checks/latest-trial-signup-smoke-check.md`
 - Current blocker remains external in production: `https://commission-tracker-webhook.onrender.com` still returns `404 Not Found` with `x-render-routing: no-server` on `/`, `/health`, `/test`, and `/stripe-webhook`, and the new incident signature flags that split as an external Render service/domain binding problem rather than an app-code route regression. This shell still lacks the live Stripe, Resend, service-role Supabase, Render app URL, and webhook SMTP values needed to complete the live verification path.
+- Added a `change_summary` section to the smoke-check JSON and Markdown outputs so each fresh run now compares itself to the previous artifact instead of forcing ops to diff snapshots manually. The latest refresh reports no material change versus the prior run, which gives Traction a clean "still blocked, no recovery yet" signal when escalating the Render outage.
 
 ## Conclusion
 Status: **Blocked for full live end-to-end confirmation**
