@@ -767,6 +767,7 @@ def build_change_summary(current_report: dict[str, Any], previous_report: dict[s
             "has_previous_report": False,
             "status_changed": False,
             "summary_changed": False,
+            "unchanged_blocked_streak": 0,
             "changes": ["No previous smoke-check artifact was available for comparison."],
         }
 
@@ -800,11 +801,19 @@ def build_change_summary(current_report: dict[str, Any], previous_report: dict[s
     if not changes:
         changes.append("No material change detected versus the previous smoke-check artifact.")
 
+    no_material_change = changes == ["No material change detected versus the previous smoke-check artifact."]
+    current_ready = current_summary.get("ready_for_live_e2e")
+    previous_streak = previous_summary.get("change_summary", {}).get("unchanged_blocked_streak", 0)
+    unchanged_blocked_streak = 0
+    if no_material_change and current_ready is False:
+        unchanged_blocked_streak = previous_streak + 1
+
     return {
         "has_previous_report": True,
         "previous_generated_at": previous_report.get("generated_at"),
         "status_changed": any("status" in change for change in changes),
-        "summary_changed": changes != ["No material change detected versus the previous smoke-check artifact."],
+        "summary_changed": not no_material_change,
+        "unchanged_blocked_streak": unchanged_blocked_streak,
         "changes": changes,
     }
 
@@ -1358,6 +1367,7 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     if change_summary.get("has_previous_report"):
         lines.append(f"- Previous artifact generated at: {change_summary.get('previous_generated_at')}")
     lines.append(f"- Material change detected: {'YES' if change_summary.get('summary_changed') else 'NO'}")
+    lines.append(f"- Unchanged blocked streak: {change_summary.get('unchanged_blocked_streak', 0)}")
     lines.extend(f"- {change}" for change in change_summary.get("changes", []) or ["None"])
 
     incident = summary["render_incident_signature"]

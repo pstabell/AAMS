@@ -262,6 +262,7 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
 
         self.assertFalse(summary["has_previous_report"])
         self.assertFalse(summary["summary_changed"])
+        self.assertEqual(summary["unchanged_blocked_streak"], 0)
         self.assertEqual(summary["changes"], ["No previous smoke-check artifact was available for comparison."])
 
     def test_build_change_summary_detects_status_and_probe_changes(self):
@@ -281,6 +282,9 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
                 "public_probe_matrix": [
                     {"path": "/health", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None}
                 ],
+                "change_summary": {
+                    "unchanged_blocked_streak": 2,
+                },
             },
         }
         current_report = {
@@ -306,9 +310,57 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertTrue(summary["has_previous_report"])
         self.assertEqual(summary["previous_generated_at"], "2026-04-03T23:16:00+00:00")
         self.assertTrue(summary["summary_changed"])
+        self.assertEqual(summary["unchanged_blocked_streak"], 0)
         self.assertTrue(any("public webhook health status changed from 404 to 200" in change for change in summary["changes"]))
         self.assertTrue(any("Probe /health status changed from 404 to 200" in change for change in summary["changes"]))
         self.assertTrue(any("Probe /health x-render-routing changed from no-server to None" in change for change in summary["changes"]))
+
+    def test_build_change_summary_tracks_repeated_unchanged_blocked_runs(self):
+        previous_report = {
+            "generated_at": "2026-04-03T23:16:00+00:00",
+            "public_checks": {
+                "app": {"status": 200},
+                "webhook_health": {"status": 404},
+            },
+            "summary": {
+                "ready_for_live_e2e": False,
+                "public_webhook_no_server": True,
+                "render_incident_signature": {
+                    "repo_contract_ok": True,
+                    "external_routing_issue": True,
+                },
+                "public_probe_matrix": [
+                    {"path": "/health", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None}
+                ],
+                "change_summary": {
+                    "unchanged_blocked_streak": 3,
+                },
+            },
+        }
+        current_report = {
+            "public_checks": {
+                "app": {"status": 200},
+                "webhook_health": {"status": 404},
+            },
+            "summary": {
+                "ready_for_live_e2e": False,
+                "public_webhook_no_server": True,
+                "render_incident_signature": {
+                    "repo_contract_ok": True,
+                    "external_routing_issue": True,
+                },
+                "public_probe_matrix": [
+                    {"path": "/health", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None}
+                ],
+            },
+        }
+
+        summary = smoke.build_change_summary(current_report, previous_report)
+
+        self.assertTrue(summary["has_previous_report"])
+        self.assertFalse(summary["summary_changed"])
+        self.assertEqual(summary["unchanged_blocked_streak"], 4)
+        self.assertEqual(summary["changes"], ["No material change detected versus the previous smoke-check artifact."])
 
     def test_build_public_probe_matrix_rolls_up_each_webhook_probe(self):
         report = {
@@ -876,6 +928,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render domain attachment commands", markdown)
         self.assertIn("## Render hostname diagnostics", markdown)
         self.assertIn("## Public webhook probe matrix", markdown)
+        self.assertIn("## Change summary versus previous smoke check", markdown)
+        self.assertIn("- Unchanged blocked streak: 0", markdown)
         self.assertIn("## Render incident signature", markdown)
         self.assertIn("## Render support packet", markdown)
         self.assertIn("## Owner action plan", markdown)

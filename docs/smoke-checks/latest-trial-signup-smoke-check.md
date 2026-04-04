@@ -1,6 +1,6 @@
 # Trial Signup Smoke Check Snapshot
 
-Generated at: 2026-04-04T01:17:02.567754+00:00
+Generated at: 2026-04-04T03:16:37.286280+00:00
 Ready for live e2e: NO
 
 ## Public checks
@@ -127,8 +127,9 @@ PY
 
 
 ## Change summary versus previous smoke check
-- Previous artifact generated at: 2026-04-04T01:14:39.524918+00:00
+- Previous artifact generated at: 2026-04-04T01:17:02.567754+00:00
 - Material change detected: NO
+- Unchanged blocked streak: 1
 - No material change detected versus the previous smoke-check artifact.
 
 ## Render incident signature
@@ -141,8 +142,8 @@ PY
 ## Render support packet
 - Incident type: render-webhook-routing-outage
 - Requested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.
-- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6c789b6a30fc18-IAD; date=Sat, 04 Apr 2026 01:17:02 GMT
-- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6c789bdc688b8b-IAD; date=Sat, 04 Apr 2026 01:17:02 GMT
+- commission-tracker-app: host=commission-tracker-app.onrender.com; probe_path=/; status=200 OK; attachment_state=healthy-attached; x-render-origin-server=TornadoServer/6.5.5; x-render-routing=None; cf-ray=9e6d27c58ff89698-IAD; date=Sat, 04 Apr 2026 03:16:37 GMT
+- commission-tracker-webhook: host=commission-tracker-webhook.onrender.com; probe_path=/health; status=404 Not Found; attachment_state=missing-backend-attachment; x-render-origin-server=None; x-render-routing=no-server; cf-ray=9e6d27c64ec2ef68-IAD; date=Sat, 04 Apr 2026 03:16:37 GMT
 
 ## Owner action plan
 - traction:
@@ -173,7 +174,7 @@ PY
 
 ## Render escalation message
 Render support request for AMS-APP webhook routing outage.
-Generated at 2026-04-04T01:17:02.567754+00:00.
+Generated at 2026-04-04T03:16:37.286280+00:00.
 Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.
 Healthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.
 Broken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.
