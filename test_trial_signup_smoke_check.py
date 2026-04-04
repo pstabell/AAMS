@@ -255,6 +255,22 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(details["commission-tracker-webhook"]["x_render_routing"], "no-server")
         self.assertIn("HTTP 404", details["commission-tracker-webhook"]["evidence"])
 
+    def test_build_artifact_refresh_commands_returns_copy_paste_runs(self):
+        commands = smoke.build_artifact_refresh_commands()
+
+        self.assertEqual(
+            commands["json"],
+            "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json",
+        )
+        self.assertEqual(
+            commands["markdown"],
+            "python3 scripts/trial_signup_smoke_check.py --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
+        )
+        self.assertEqual(
+            commands["both"],
+            "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
+        )
+
     def test_build_owner_ready_messages_generates_forwardable_handoffs(self):
         report = {
             "generated_at": "2026-04-04T19:14:00+00:00",
@@ -1311,6 +1327,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("## Render incident signature", markdown)
         self.assertIn("## Render support packet", markdown)
         self.assertIn("## Escalation recommendation", markdown)
+        self.assertIn("## Artifact refresh commands", markdown)
+        self.assertIn("- both: python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md", markdown)
         self.assertIn("## Owner action plan", markdown)
         self.assertIn("## Render recovery playbook", markdown)
         self.assertIn("## Recovery exit criteria", markdown)
@@ -1406,6 +1424,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertEqual(payload["summary"]["render_support_packet"]["incident_type"], "render-webhook-routing-outage")
         self.assertEqual(payload["summary"]["escalation_recommendation"]["severity"], "low")
         self.assertEqual(payload["summary"]["escalation_recommendation"]["owner"], "Forge")
+        self.assertEqual(
+            payload["summary"]["artifact_refresh_commands"]["both"],
+            "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
+        )
         self.assertIn("traction", payload["summary"]["owner_action_plan"])
         self.assertIn("render_support", payload["summary"]["owner_action_plan"])
         self.assertIn("verification_shell", payload["summary"]["owner_action_plan"])

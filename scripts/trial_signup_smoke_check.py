@@ -1292,6 +1292,15 @@ def build_owner_action_plan(
     return plans
 
 
+def build_artifact_refresh_commands() -> dict[str, str]:
+    return {
+        "json": "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json",
+        "markdown": "python3 scripts/trial_signup_smoke_check.py --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
+        "both": "python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md",
+    }
+
+
+
 def build_owner_ready_messages(
     report: dict[str, Any],
     render_support_packet: dict[str, Any],
@@ -1507,6 +1516,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         render_hostname_diagnostics,
         render_incident_signature,
     )
+    artifact_refresh_commands = build_artifact_refresh_commands()
     owner_action_plan = build_owner_action_plan(
         report,
         render_support_packet,
@@ -1596,6 +1606,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         "public_probe_commands": public_probe_commands,
         "render_incident_signature": render_incident_signature,
         "render_support_packet": render_support_packet,
+        "artifact_refresh_commands": artifact_refresh_commands,
         "owner_action_plan": owner_action_plan,
         "owner_ready_messages": owner_ready_messages,
         "render_recovery_playbook": render_recovery_playbook,
@@ -1836,6 +1847,15 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             f"- Urgency: {escalation['urgency']}",
             f"- Prerequisite: {escalation['prerequisite']}",
             f"- Recommended message: {escalation['recommended_message']}",
+            "",
+            "## Artifact refresh commands",
+        ]
+    )
+    for label, command in summary["artifact_refresh_commands"].items():
+        lines.append(f"- {label}: {command}")
+
+    lines.extend(
+        [
             "",
             "## Owner action plan",
         ]
