@@ -69,6 +69,51 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertTrue(details["present"])
         self.assertEqual(details["length"], len("secret-value"))
 
+    def test_build_repo_context_reports_clean_git_head(self):
+        responses = {
+            ("rev-parse", "--abbrev-ref", "HEAD"): "main",
+            ("rev-parse", "HEAD"): "abc123def456",
+            ("rev-parse", "--short", "HEAD"): "abc123d",
+            ("status", "--short"): "",
+            ("remote", "get-url", "origin"): "https://github.com/pstabell/AMS-APP.git",
+            ("log", "-1", "--pretty=%s"): "feat: sample commit",
+            ("log", "-1", "--date=iso-strict", "--pretty=%cI"): "2026-04-05T18:00:00+00:00",
+        }
+
+        with mock.patch.object(smoke, "_run_git_command", side_effect=lambda *args: responses.get(args)):
+            context = smoke.build_repo_context()
+
+        self.assertTrue(context["available"])
+        self.assertEqual(context["branch"], "main")
+        self.assertEqual(context["short_head"], "abc123d")
+        self.assertEqual(context["status"], "clean")
+        self.assertFalse(context["dirty"])
+        self.assertEqual(context["tracked_changes"], [])
+
+    def test_build_repo_context_reports_dirty_git_head(self):
+        responses = {
+            ("rev-parse", "--abbrev-ref", "HEAD"): "main",
+            ("rev-parse", "HEAD"): "abc123def456",
+            ("rev-parse", "--short", "HEAD"): "abc123d",
+            ("status", "--short"): " M scripts/trial_signup_smoke_check.py\n?? docs/smoke-checks/latest-trial-signup-smoke-check.md",
+            ("remote", "get-url", "origin"): "https://github.com/pstabell/AMS-APP.git",
+            ("log", "-1", "--pretty=%s"): "feat: sample commit",
+            ("log", "-1", "--date=iso-strict", "--pretty=%cI"): "2026-04-05T18:00:00+00:00",
+        }
+
+        with mock.patch.object(smoke, "_run_git_command", side_effect=lambda *args: responses.get(args)):
+            context = smoke.build_repo_context()
+
+        self.assertEqual(context["status"], "dirty")
+        self.assertTrue(context["dirty"])
+        self.assertEqual(
+            context["tracked_changes"],
+            [
+                "M scripts/trial_signup_smoke_check.py",
+                "?? docs/smoke-checks/latest-trial-signup-smoke-check.md",
+            ],
+        )
+
     def test_check_local_dependencies_reports_missing_modules(self):
         real_import = __import__
 
@@ -1383,6 +1428,21 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
                 "requirements": {},
                 "missing_packages": [],
             },
+        ), mock.patch.object(
+            smoke,
+            "build_repo_context",
+            return_value={
+                "branch": "main",
+                "head": "abc123def456",
+                "short_head": "abc123d",
+                "head_subject": "feat: sample commit",
+                "head_committed_at": "2026-04-05T18:00:00+00:00",
+                "remote_origin": "https://github.com/pstabell/AMS-APP.git",
+                "dirty": False,
+                "tracked_changes": [],
+                "status": "clean",
+                "available": True,
+            },
         ):
             return smoke.generate_report()
 
@@ -1425,6 +1485,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("runtime=", markdown)
         self.assertIn("buildCommand=", markdown)
         self.assertIn("Webhook service contract OK: YES", markdown)
+        self.assertIn("## Repo context", markdown)
+        self.assertIn("- Git status: clean", markdown)
+        self.assertIn("- Branch: main", markdown)
+        self.assertIn("- HEAD: abc123d", markdown)
         self.assertIn("## Blocking reasons", markdown)
         self.assertIn("## Recommended next actions", markdown)
         self.assertIn("## Render restore checklist", markdown)

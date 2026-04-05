@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -446,6 +447,45 @@ def check_render_blueprint() -> dict[str, Any]:
         "payload": "Render blueprint looks complete" if not problems else "; ".join(problems),
         "services": discovered_services,
         "missing_services": missing_services,
+    }
+
+
+def _run_git_command(*args: str) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception:
+        return None
+    output = result.stdout.strip()
+    return output or None
+
+
+def build_repo_context() -> dict[str, Any]:
+    branch = _run_git_command("rev-parse", "--abbrev-ref", "HEAD")
+    head = _run_git_command("rev-parse", "HEAD")
+    short_head = _run_git_command("rev-parse", "--short", "HEAD")
+    status_output = _run_git_command("status", "--short") or ""
+    remote_url = _run_git_command("remote", "get-url", "origin")
+    head_subject = _run_git_command("log", "-1", "--pretty=%s")
+    head_committed_at = _run_git_command("log", "-1", "--date=iso-strict", "--pretty=%cI")
+
+    tracked_changes = [line.strip() for line in status_output.splitlines() if line.strip()]
+    return {
+        "branch": branch,
+        "head": head,
+        "short_head": short_head,
+        "head_subject": head_subject,
+        "head_committed_at": head_committed_at,
+        "remote_origin": remote_url,
+        "dirty": bool(tracked_changes),
+        "tracked_changes": tracked_changes,
+        "status": "dirty" if tracked_changes else "clean",
+        "available": bool(head),
     }
 
 
@@ -1773,6 +1813,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
             "render_blueprint": check_render_blueprint(),
             "webhook_service_contract": check_webhook_service_contract(),
         },
+        "repo_context": build_repo_context(),
     }
 
     missing_required = [
@@ -1860,6 +1901,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         "owner_ready_messages": owner_ready_messages,
         "render_recovery_playbook": render_recovery_playbook,
         "recovery_exit_criteria": recovery_exit_criteria,
+        "repo_context": report["repo_context"],
         "ready_for_live_e2e": ready_for_live_e2e,
     }
     report["summary"] = current_summary
@@ -1964,6 +2006,15 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Render blueprint service contract summary: {summarize_render_blueprint_services(report['local_checks']['render_blueprint'].get('services', {}))}",
         f"- Webhook service contract OK: {'YES' if summary['webhook_service_contract_ok'] else 'NO'}",
         f"- Webhook service contract payload: {report['local_checks']['webhook_service_contract']['payload']}",
+        "",
+        "## Repo context",
+        f"- Git status: {report['repo_context'].get('status', 'unknown')}",
+        f"- Branch: {report['repo_context'].get('branch') or 'Unknown'}",
+        f"- HEAD: {report['repo_context'].get('short_head') or report['repo_context'].get('head') or 'Unknown'}",
+        f"- Head subject: {report['repo_context'].get('head_subject') or 'Unknown'}",
+        f"- Head committed at: {report['repo_context'].get('head_committed_at') or 'Unknown'}",
+        f"- Origin: {report['repo_context'].get('remote_origin') or 'Unknown'}",
+        f"- Tracked changes: {', '.join(report['repo_context'].get('tracked_changes', [])) if report['repo_context'].get('tracked_changes') else 'None'}",
         "",
         "## Missing required env vars",
     ])
