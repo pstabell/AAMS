@@ -302,11 +302,13 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
                 "docs/smoke-checks/escalation-packet/render-support-message.txt",
                 "docs/smoke-checks/escalation-packet/render-support-payload.json",
                 "docs/smoke-checks/escalation-packet/evidence-manifest.json",
+                "docs/smoke-checks/escalation-packet/README.txt",
             ],
         )
         self.assertIn("render.yaml", inventory["render_support_packet_files"])
         self.assertIn("docs/smoke-checks/owner-ready/render_support.txt", inventory["render_support_packet_files"])
         self.assertIn("docs/smoke-checks/escalation-packet/render-support-message.txt", inventory["render_support_packet_files"])
+        self.assertIn("docs/smoke-checks/escalation-packet/README.txt", inventory["render_support_packet_files"])
         self.assertIn("docs/smoke-checks/escalation-packet/evidence-manifest.json", inventory["traction_handoff_files"])
         self.assertEqual(inventory["owner_ready_archive"]["file_count"], 0)
         self.assertFalse(inventory["escalation_packet_dir"]["exists"])
@@ -1581,6 +1583,32 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
                 (pathlib.Path(temp_dir) / "2026-04-05T05-14-58-289624-00-00-traction.txt").read_text(encoding="utf-8"),
             )
 
+    def test_build_escalation_packet_readme_summarizes_packet_contents(self):
+        report = self._build_ready_report()
+        report["generated_at"] = "2026-04-05T05:14:58.289624+00:00"
+        report["summary"]["artifact_inventory"] = {
+            "recommended_attachments": ["docs/smoke-checks/latest-trial-signup-smoke-check.json"],
+            "render_support_packet_files": ["render.yaml", "docs/smoke-checks/escalation-packet/render-support-message.txt"],
+            "traction_handoff_files": ["docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md"],
+        }
+        report["summary"]["render_escalation_payload"] = {
+            "ticket_title": "Webhook routing outage",
+            "severity": "critical",
+            "owner": "Traction",
+            "destination": "Render support",
+            "requested_action": "Reattach the webhook hostname and redeploy.",
+            "missing_live_e2e_secrets": ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
+        }
+
+        readme = smoke.build_escalation_packet_readme(report)
+
+        self.assertIn("AMS-APP Render Escalation Packet", readme)
+        self.assertIn("Severity: critical", readme)
+        self.assertIn("- render.yaml", readme)
+        self.assertIn("- docs/smoke-checks/latest-trial-signup-smoke-check.json", readme)
+        self.assertIn("- STRIPE_SECRET_KEY", readme)
+        self.assertIn("Send render-support-message.txt as the support message body.", readme)
+
     def test_write_escalation_packet_writes_send_ready_files(self):
         report = self._build_ready_report()
         report["generated_at"] = "2026-04-05T05:14:58.289624+00:00"
@@ -1598,6 +1626,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertEqual(
                 written_names,
                 [
+                    "README.txt",
                     "evidence-manifest.json",
                     "render-support-message.txt",
                     "render-support-payload.json",
@@ -1612,6 +1641,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             manifest = json.loads((pathlib.Path(temp_dir) / "evidence-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["generated_at"], "2026-04-05T05:14:58.289624+00:00")
             self.assertIn("render.yaml", manifest["render_support_packet_files"])
+            self.assertIn("AMS-APP Render Escalation Packet", (pathlib.Path(temp_dir) / "README.txt").read_text(encoding="utf-8"))
 
     def test_build_escalation_packet_archive_file_paths_uses_generated_at_slug(self):
         report = self._build_ready_report()
@@ -1631,6 +1661,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             archive_paths["evidence-manifest.json"].as_posix(),
             "docs/smoke-checks/escalation-packet/archive/2026-04-05T05-14-58-289624-00-00-evidence-manifest.json",
         )
+        self.assertEqual(
+            archive_paths["README.txt"].as_posix(),
+            "docs/smoke-checks/escalation-packet/archive/2026-04-05T05-14-58-289624-00-00-README.txt",
+        )
 
     def test_write_escalation_packet_archive_writes_timestamped_snapshots(self):
         report = self._build_ready_report()
@@ -1649,6 +1683,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertEqual(
                 written_names,
                 [
+                    "2026-04-05T05-14-58-289624-00-00-README.txt",
                     "2026-04-05T05-14-58-289624-00-00-evidence-manifest.json",
                     "2026-04-05T05-14-58-289624-00-00-render-support-message.txt",
                     "2026-04-05T05-14-58-289624-00-00-render-support-payload.json",
@@ -1657,6 +1692,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertEqual(
                 (pathlib.Path(temp_dir) / "2026-04-05T05-14-58-289624-00-00-render-support-message.txt").read_text(encoding="utf-8"),
                 "Render support request body\n",
+            )
+            self.assertIn(
+                "AMS-APP Render Escalation Packet",
+                (pathlib.Path(temp_dir) / "2026-04-05T05-14-58-289624-00-00-README.txt").read_text(encoding="utf-8"),
             )
 
     def test_main_can_write_json_markdown_and_owner_message_outputs(self):
@@ -1697,9 +1736,11 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertTrue((escalation_dir / "render-support-message.txt").exists())
             self.assertTrue((escalation_dir / "render-support-payload.json").exists())
             self.assertTrue((escalation_dir / "evidence-manifest.json").exists())
+            self.assertTrue((escalation_dir / "README.txt").exists())
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-render-support-message.txt").exists())
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-render-support-payload.json").exists())
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-evidence-manifest.json").exists())
+            self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-README.txt").exists())
             self.assertTrue(json.loads(json_path.read_text())["summary"]["ready_for_live_e2e"])
             self.assertIn("Trial Signup Smoke Check Snapshot", markdown_path.read_text())
 

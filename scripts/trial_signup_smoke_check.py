@@ -1345,7 +1345,58 @@ def build_escalation_packet_archive_file_paths(report: dict[str, Any], archive_d
         "render-support-message.txt": base_path / f"{slug}-render-support-message.txt",
         "render-support-payload.json": base_path / f"{slug}-render-support-payload.json",
         "evidence-manifest.json": base_path / f"{slug}-evidence-manifest.json",
+        "README.txt": base_path / f"{slug}-README.txt",
     }
+
+
+def build_escalation_packet_readme(report: dict[str, Any]) -> str:
+    summary = report.get("summary", {})
+    inventory = summary.get("artifact_inventory", {})
+    payload = summary.get("render_escalation_payload", {})
+    packet_files = inventory.get("render_support_packet_files", [])
+    recommended = inventory.get("recommended_attachments", [])
+    missing_secrets = payload.get("missing_live_e2e_secrets", [])
+
+    lines = [
+        "AMS-APP Render Escalation Packet",
+        f"Generated at: {report.get('generated_at')}",
+        f"Severity: {payload.get('severity', 'unknown')}",
+        f"Owner: {payload.get('owner', 'unknown')}",
+        f"Destination: {payload.get('destination', 'unknown')}",
+        "",
+        "What this packet is:",
+        "A send-ready evidence bundle for the current Render webhook routing outage blocking live Stripe trial signup validation.",
+        "",
+        "Primary requested action:",
+        str(payload.get("requested_action", "Not provided.")),
+        "",
+        "Recommended packet files:",
+    ]
+
+    for item in packet_files:
+        lines.append(f"- {item}")
+
+    lines.extend(["", "Broader recommended attachments:"])
+    for item in recommended:
+        lines.append(f"- {item}")
+
+    if missing_secrets:
+        lines.extend([
+            "",
+            "Live verification shell still needs these secrets before the final Stripe test:",
+        ])
+        for item in missing_secrets:
+            lines.append(f"- {item}")
+
+    lines.extend([
+        "",
+        "If forwarding to Render support:",
+        "1. Send render-support-message.txt as the support message body.",
+        "2. Attach render-support-payload.json and evidence-manifest.json.",
+        "3. Include the latest smoke-check JSON/Markdown artifacts and render.yaml from the packet file list above.",
+    ])
+
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def build_artifact_inventory() -> dict[str, Any]:
@@ -1363,6 +1414,7 @@ def build_artifact_inventory() -> dict[str, Any]:
         "escalation_packet_message": DEFAULT_ESCALATION_PACKET_DIR / "render-support-message.txt",
         "escalation_packet_payload": DEFAULT_ESCALATION_PACKET_DIR / "render-support-payload.json",
         "escalation_packet_manifest": DEFAULT_ESCALATION_PACKET_DIR / "evidence-manifest.json",
+        "escalation_packet_readme": DEFAULT_ESCALATION_PACKET_DIR / "README.txt",
     }
 
     inventory: dict[str, Any] = {}
@@ -1411,6 +1463,7 @@ def build_artifact_inventory() -> dict[str, Any]:
         "docs/smoke-checks/escalation-packet/render-support-message.txt",
         "docs/smoke-checks/escalation-packet/render-support-payload.json",
         "docs/smoke-checks/escalation-packet/evidence-manifest.json",
+        "docs/smoke-checks/escalation-packet/README.txt",
     ]
     inventory["render_support_packet_files"] = [
         "docs/smoke-checks/latest-trial-signup-smoke-check.json",
@@ -1420,6 +1473,7 @@ def build_artifact_inventory() -> dict[str, Any]:
         "docs/smoke-checks/escalation-packet/render-support-message.txt",
         "docs/smoke-checks/escalation-packet/render-support-payload.json",
         "docs/smoke-checks/escalation-packet/evidence-manifest.json",
+        "docs/smoke-checks/escalation-packet/README.txt",
     ]
     inventory["traction_handoff_files"] = [
         "docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md",
@@ -2184,6 +2238,7 @@ def build_escalation_packet_file_contents(report: dict[str, Any]) -> dict[str, s
             indent=2,
             sort_keys=True,
         ) + "\n",
+        "README.txt": build_escalation_packet_readme(report),
     }
 
 
