@@ -1582,14 +1582,6 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         render_incident_signature,
         missing_required,
     )
-    change_summary = build_change_summary(report, previous_report)
-    incident_history = build_incident_history(report, previous_report=previous_report)
-    escalation_recommendation = build_escalation_recommendation(
-        report,
-        render_incident_signature,
-        change_summary,
-        missing_required,
-    )
     ready_for_live_e2e = (
         report["public_checks"]["app"]["ok"]
         and report["public_checks"]["webhook_health"]["ok"]
@@ -1599,29 +1591,7 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         and report["local_checks"]["webhook_service_contract"]["ok"]
         and not missing_required
     )
-    executive_summary_lines = build_executive_summary_lines(
-        report,
-        render_incident_signature,
-        escalation_recommendation,
-        change_summary,
-        missing_required,
-        ready_for_live_e2e,
-    )
-    render_escalation_message = build_render_escalation_message(
-        report,
-        render_support_packet,
-        render_recovery_playbook,
-    )
-    render_escalation_payload = build_render_escalation_payload(
-        report,
-        render_support_packet,
-        render_incident_signature,
-        change_summary,
-        escalation_recommendation,
-        missing_required,
-    )
-
-    report["summary"] = {
+    current_summary = {
         "public_app_ok": report["public_checks"]["app"]["ok"],
         "public_webhook_ok": report["public_checks"]["webhook_health"]["ok"],
         "public_webhook_any_endpoint_ok": report["public_checks"]["webhook_diagnostics"]["any_ok"],
@@ -1654,14 +1624,49 @@ def generate_report(previous_report: dict[str, Any] | None = None) -> dict[str, 
         "owner_ready_messages": owner_ready_messages,
         "render_recovery_playbook": render_recovery_playbook,
         "recovery_exit_criteria": recovery_exit_criteria,
-        "render_escalation_message": render_escalation_message,
-        "render_escalation_payload": render_escalation_payload,
         "ready_for_live_e2e": ready_for_live_e2e,
-        "change_summary": change_summary,
-        "incident_history": incident_history,
-        "escalation_recommendation": escalation_recommendation,
-        "executive_summary_lines": executive_summary_lines,
     }
+    report["summary"] = current_summary
+    change_summary = build_change_summary(report, previous_report)
+    incident_history = build_incident_history(report, previous_report=previous_report)
+    escalation_recommendation = build_escalation_recommendation(
+        report,
+        render_incident_signature,
+        change_summary,
+        missing_required,
+    )
+    executive_summary_lines = build_executive_summary_lines(
+        report,
+        render_incident_signature,
+        escalation_recommendation,
+        change_summary,
+        missing_required,
+        ready_for_live_e2e,
+    )
+    render_escalation_message = build_render_escalation_message(
+        report,
+        render_support_packet,
+        render_recovery_playbook,
+    )
+    render_escalation_payload = build_render_escalation_payload(
+        report,
+        render_support_packet,
+        render_incident_signature,
+        change_summary,
+        escalation_recommendation,
+        missing_required,
+    )
+
+    report["summary"].update(
+        {
+            "render_escalation_message": render_escalation_message,
+            "render_escalation_payload": render_escalation_payload,
+            "change_summary": change_summary,
+            "incident_history": incident_history,
+            "escalation_recommendation": escalation_recommendation,
+            "executive_summary_lines": executive_summary_lines,
+        }
+    )
     return report
 
 

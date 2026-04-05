@@ -555,6 +555,49 @@ class TrialSignupSmokeCheckTests(unittest.TestCase):
         self.assertEqual(summary["unchanged_blocked_streak"], 4)
         self.assertEqual(summary["changes"], ["No material change detected versus the previous smoke-check artifact."])
 
+    def test_generate_report_populates_summary_before_change_summary_comparison(self):
+        previous_report = {
+            "generated_at": "2026-04-04T23:16:28.644845+00:00",
+            "public_checks": {
+                "app": {"status": 200},
+                "webhook_health": {"status": 404},
+            },
+            "summary": {
+                "ready_for_live_e2e": False,
+                "public_webhook_no_server": True,
+                "render_incident_signature": {
+                    "repo_contract_ok": True,
+                    "external_routing_issue": True,
+                },
+                "public_probe_matrix": [
+                    {"path": "/", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None},
+                    {"path": "/health", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None},
+                    {"path": "/stripe-webhook", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None},
+                    {"path": "/test", "status": 404, "x_render_routing": "no-server", "x_render_origin_server": None},
+                ],
+                "change_summary": {
+                    "unchanged_blocked_streak": 5,
+                },
+            },
+        }
+
+        with mock.patch.object(smoke, "fetch_url", side_effect=[
+            {"ok": True, "status": 200, "reason": "OK", "body_preview": "app", "headers": {}},
+            {"ok": False, "status": 404, "reason": "Not Found", "body_preview": "missing", "headers": {"x-render-routing": "no-server"}},
+            {"ok": False, "status": 404, "reason": "Not Found", "body_preview": "missing", "headers": {"x-render-routing": "no-server"}},
+            {"ok": False, "status": 404, "reason": "Not Found", "body_preview": "missing", "headers": {"x-render-routing": "no-server"}},
+            {"ok": False, "status": 404, "reason": "Not Found", "body_preview": "missing", "headers": {"x-render-routing": "no-server"}},
+            {"ok": False, "status": 404, "reason": "Not Found", "body_preview": "missing", "headers": {"x-render-routing": "no-server"}},
+        ]), mock.patch.object(smoke, "check_local_webhook_route", return_value={"ok": False, "status": None, "payload": "deps missing", "dependency_check": {"ok": False, "missing_modules": ["flask"]}}), mock.patch.object(smoke, "check_checkout_contract", return_value={"ok": True, "status": 200, "payload": {}}), mock.patch.object(smoke, "check_render_blueprint", return_value={"ok": True, "status": 200, "payload": "ok", "services": {}}), mock.patch.object(smoke, "check_webhook_service_contract", return_value={"ok": True, "status": 200, "payload": "ok", "routes": {}, "requirements": {}, "missing_packages": []}), mock.patch.object(smoke, "inspect_env_var", return_value={"present": False, "length": 0}), mock.patch.object(smoke, "build_artifact_inventory", return_value={}), mock.patch.object(smoke, "build_incident_history", return_value={"artifact_count": 1, "blocked_artifact_count": 1}):
+            report = smoke.generate_report(previous_report=previous_report)
+
+        change_summary = report["summary"]["change_summary"]
+        self.assertTrue(change_summary["has_previous_report"])
+        self.assertFalse(change_summary["summary_changed"])
+        self.assertEqual(change_summary["changes"], ["No material change detected versus the previous smoke-check artifact."])
+        self.assertEqual(change_summary["unchanged_blocked_streak"], 6)
+        self.assertFalse(report["summary"]["ready_for_live_e2e"])
+
     def test_build_public_probe_matrix_rolls_up_each_webhook_probe(self):
         report = {
             "webhook_base_url": "https://commission-tracker-webhook.onrender.com",

@@ -9,6 +9,9 @@
 Validate the solo-agent trial signup path from signup form through Stripe checkout configuration, account provisioning webhook behavior, and onboarding email path.
 
 ## Latest Update
+- 2026-04-04 9:14 PM ET: Fixed a real smoke-check comparison bug in `scripts/trial_signup_smoke_check.py`. The generated report now populates the current summary before computing `change_summary`, so repeated blocked runs no longer emit false deltas like `ready_for_live_e2e changed from False to None`.
+- Added regression coverage in `test_trial_signup_smoke_check.py` to lock that behavior in at the `generate_report(...)` level instead of only unit-testing `build_change_summary(...)` in isolation.
+- Validation: `python3 -m unittest test_checkout_flow.py test_webhook_subscription_status.py test_trial_signup_smoke_check.py` passed 195/195, and a fresh `python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md` run now reports `No material change detected versus the previous smoke-check artifact.` with a correct unchanged blocked streak instead of bogus `None` comparisons.
 - 2026-04-04 7:14 PM ET: Added `artifact_inventory` to `scripts/trial_signup_smoke_check.py`, so every smoke-check JSON and Markdown artifact now lists the exact evidence files, relative repo paths, existence flags, sizes, timestamps, and recommended attachment bundles for Traction and Render support.
 - This removes another manual handoff step: the next owner no longer has to guess which files to attach when escalating the Render outage or re-running the verification packet.
 - Updated `owner_action_plan` guidance so Traction explicitly attaches the latest smoke-check JSON, Markdown, trial-signup report, and `render.yaml`, and so the verification shell re-attaches refreshed evidence after each rerun.
