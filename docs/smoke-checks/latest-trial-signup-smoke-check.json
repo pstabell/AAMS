@@ -42,7 +42,7 @@
       }
     }
   },
-  "generated_at": "2026-04-05T11:17:32.923153+00:00",
+  "generated_at": "2026-04-05T13:17:05.574510+00:00",
   "local_checks": {
     "checkout_contract": {
       "expected_trial_days": 14,
@@ -192,9 +192,9 @@
     "app": {
       "body_preview": "<!--\n Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)\n\n Licensed under the Apache License, Version 2.0 (the \"License\");\n you may not use this file except in compliance with the License.\n You may obtain a copy of the License at\n\n     http://www.apache.org/licenses/LICENSE-2.0\n\n Unless required by applicable law or agreed to in writing, software\n distributed under the License is distributed on an \"AS IS\" BASIS,\n WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n See ",
       "headers": {
-        "cf-ray": "9e7825a11974d962-IAD",
+        "cf-ray": "9e78d4bf2d5ff90b-IAD",
         "content-type": "text/html",
-        "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+        "date": "Sun, 05 Apr 2026 13:17:05 GMT",
         "server": "cloudflare",
         "x-render-origin-server": "TornadoServer/6.5.5"
       },
@@ -212,9 +212,9 @@
         "https://commission-tracker-webhook.onrender.com/": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e7825a27e8ec978-IAD",
+            "cf-ray": "9e78d4c0fc66d6e1-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+            "date": "Sun, 05 Apr 2026 13:17:06 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -225,9 +225,9 @@
         "https://commission-tracker-webhook.onrender.com/health": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e7825a34f4f81c7-IAD",
+            "cf-ray": "9e78d4c259c8c93b-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+            "date": "Sun, 05 Apr 2026 13:17:06 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -238,9 +238,9 @@
         "https://commission-tracker-webhook.onrender.com/stripe-webhook": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e7825a5eba1de83-IAD",
+            "cf-ray": "9e78d4c3fba5cbc5-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+            "date": "Sun, 05 Apr 2026 13:17:06 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -251,9 +251,9 @@
         "https://commission-tracker-webhook.onrender.com/test": {
           "body_preview": "Not Found\n",
           "headers": {
-            "cf-ray": "9e7825a49fdc39c0-IAD",
+            "cf-ray": "9e78d4c319d0d095-IAD",
             "content-type": "text/plain; charset=utf-8",
-            "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+            "date": "Sun, 05 Apr 2026 13:17:06 GMT",
             "server": "cloudflare",
             "x-render-routing": "no-server"
           },
@@ -269,9 +269,9 @@
     "webhook_health": {
       "body_preview": "Not Found\n",
       "headers": {
-        "cf-ray": "9e7825a1bac787a2-IAD",
+        "cf-ray": "9e78d4c039478b02-IAD",
         "content-type": "text/plain; charset=utf-8",
-        "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+        "date": "Sun, 05 Apr 2026 13:17:06 GMT",
         "server": "cloudflare",
         "x-render-routing": "no-server"
       },
@@ -284,14 +284,14 @@
     "artifact_inventory": {
       "escalation_packet_archive": {
         "exists": true,
-        "file_count": 7,
+        "file_count": 11,
         "latest_files": [
+          "docs/smoke-checks/escalation-packet/archive/2026-04-05T13-17-05-574510-00-00-README.txt",
+          "docs/smoke-checks/escalation-packet/archive/2026-04-05T13-17-05-574510-00-00-evidence-manifest.json",
+          "docs/smoke-checks/escalation-packet/archive/2026-04-05T13-17-05-574510-00-00-render-support-payload.json",
+          "docs/smoke-checks/escalation-packet/archive/2026-04-05T13-17-05-574510-00-00-render-support-message.txt",
           "docs/smoke-checks/escalation-packet/archive/2026-04-05T11-17-32-923153-00-00-README.txt",
-          "docs/smoke-checks/escalation-packet/archive/2026-04-05T11-17-32-923153-00-00-evidence-manifest.json",
-          "docs/smoke-checks/escalation-packet/archive/2026-04-05T11-17-32-923153-00-00-render-support-payload.json",
-          "docs/smoke-checks/escalation-packet/archive/2026-04-05T11-17-32-923153-00-00-render-support-message.txt",
-          "docs/smoke-checks/escalation-packet/archive/2026-04-05T09-17-26-367160-00-00-evidence-manifest.json",
-          "docs/smoke-checks/escalation-packet/archive/2026-04-05T09-17-26-367160-00-00-render-support-payload.json"
+          "docs/smoke-checks/escalation-packet/archive/2026-04-05T11-17-32-923153-00-00-evidence-manifest.json"
         ],
         "path": "docs/smoke-checks/escalation-packet/archive"
       },
@@ -307,68 +307,68 @@
       },
       "escalation_packet_manifest": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.861620+00:00",
+        "modified_at": "2026-04-05T13:17:06.682113+00:00",
         "path": "docs/smoke-checks/escalation-packet/evidence-manifest.json",
-        "size_bytes": 7405
+        "size_bytes": 8765
       },
       "escalation_packet_message": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.859470+00:00",
+        "modified_at": "2026-04-05T13:17:06.681812+00:00",
         "path": "docs/smoke-checks/escalation-packet/render-support-message.txt",
         "size_bytes": 2406
       },
       "escalation_packet_payload": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.860673+00:00",
+        "modified_at": "2026-04-05T13:17:06.681947+00:00",
         "path": "docs/smoke-checks/escalation-packet/render-support-payload.json",
         "size_bytes": 1392
       },
       "escalation_packet_readme": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.861789+00:00",
+        "modified_at": "2026-04-05T13:17:06.682280+00:00",
         "path": "docs/smoke-checks/escalation-packet/README.txt",
-        "size_bytes": 1913
+        "size_bytes": 2870
       },
       "latest_json": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.855288+00:00",
+        "modified_at": "2026-04-05T13:17:06.673294+00:00",
         "path": "docs/smoke-checks/latest-trial-signup-smoke-check.json",
-        "size_bytes": 44734
+        "size_bytes": 45159
       },
       "latest_markdown": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.857863+00:00",
+        "modified_at": "2026-04-05T13:17:06.675905+00:00",
         "path": "docs/smoke-checks/latest-trial-signup-smoke-check.md",
-        "size_bytes": 29739
+        "size_bytes": 29801
       },
       "owner_ready_archive": {
         "exists": true,
-        "file_count": 24,
+        "file_count": 27,
         "latest_files": [
+          "docs/smoke-checks/owner-ready/archive/2026-04-05T13-17-05-574510-00-00-verification_shell.txt",
+          "docs/smoke-checks/owner-ready/archive/2026-04-05T13-17-05-574510-00-00-render_support.txt",
+          "docs/smoke-checks/owner-ready/archive/2026-04-05T13-17-05-574510-00-00-traction.txt",
           "docs/smoke-checks/owner-ready/archive/2026-04-05T11-17-32-923153-00-00-verification_shell.txt",
           "docs/smoke-checks/owner-ready/archive/2026-04-05T11-17-32-923153-00-00-render_support.txt",
-          "docs/smoke-checks/owner-ready/archive/2026-04-05T11-17-32-923153-00-00-traction.txt",
-          "docs/smoke-checks/owner-ready/archive/2026-04-05T09-17-26-367160-00-00-verification_shell.txt",
-          "docs/smoke-checks/owner-ready/archive/2026-04-05T09-17-26-367160-00-00-render_support.txt",
-          "docs/smoke-checks/owner-ready/archive/2026-04-05T09-17-26-367160-00-00-traction.txt"
+          "docs/smoke-checks/owner-ready/archive/2026-04-05T11-17-32-923153-00-00-traction.txt"
         ],
         "path": "docs/smoke-checks/owner-ready/archive"
       },
       "owner_ready_render_support": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.858252+00:00",
+        "modified_at": "2026-04-05T13:17:06.677622+00:00",
         "path": "docs/smoke-checks/owner-ready/render_support.txt",
         "size_bytes": 726
       },
       "owner_ready_traction": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.858099+00:00",
+        "modified_at": "2026-04-05T13:17:06.676195+00:00",
         "path": "docs/smoke-checks/owner-ready/traction.txt",
         "size_bytes": 651
       },
       "owner_ready_verification_shell": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:33.858388+00:00",
+        "modified_at": "2026-04-05T13:17:06.677769+00:00",
         "path": "docs/smoke-checks/owner-ready/verification_shell.txt",
         "size_bytes": 584
       },
@@ -402,15 +402,15 @@
       ],
       "smoke_check_script": {
         "exists": true,
-        "modified_at": "2026-04-05T11:15:42.771115+00:00",
+        "modified_at": "2026-04-05T13:15:41.800455+00:00",
         "path": "scripts/trial_signup_smoke_check.py",
-        "size_bytes": 102896
+        "size_bytes": 106362
       },
       "smoke_check_tests": {
         "exists": true,
-        "modified_at": "2026-04-05T11:17:15.122068+00:00",
+        "modified_at": "2026-04-05T13:16:52.531258+00:00",
         "path": "test_trial_signup_smoke_check.py",
-        "size_bytes": 94440
+        "size_bytes": 96769
       },
       "traction_handoff_files": [
         "docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md",
@@ -422,9 +422,9 @@
       ],
       "trial_signup_report": {
         "exists": true,
-        "modified_at": "2026-04-05T09:17:13.983699+00:00",
+        "modified_at": "2026-04-05T11:17:51.500392+00:00",
         "path": "docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md",
-        "size_bytes": 17051
+        "size_bytes": 18737
       }
     },
     "artifact_refresh_commands": {
@@ -443,19 +443,47 @@
         "No material change detected versus the previous smoke-check artifact."
       ],
       "has_previous_report": true,
-      "previous_generated_at": "2026-04-05T09:17:26.367160+00:00",
+      "previous_generated_at": "2026-04-05T11:17:32.923153+00:00",
       "status_changed": false,
       "summary_changed": false,
-      "unchanged_blocked_streak": 13
+      "unchanged_blocked_streak": 14
     },
     "checkout_contract_ok": true,
+    "escalation_packet_hashes": {
+      "README.txt": {
+        "sha256": "ba4d4d0e538becac934951cdbadf8c09af7af990e050d54f59117caa99162db8",
+        "size_bytes": 2768
+      },
+      "evidence-manifest.json": {
+        "sha256": "e403d604173e0ef83abad2b8e55a91d10d9943636650ea446156a58320296457",
+        "size_bytes": 8765
+      },
+      "latest-trial-signup-smoke-check.json": {
+        "path": "docs/smoke-checks/latest-trial-signup-smoke-check.json",
+        "sha256": "21a1b71c563485ac20b932b621c9acc88e63dd53c076a3aa4395d61103c3f8d1",
+        "size_bytes": 45159
+      },
+      "latest-trial-signup-smoke-check.md": {
+        "path": "docs/smoke-checks/latest-trial-signup-smoke-check.md",
+        "sha256": "f3a9be04eb2f946e841a324271fa282c0ef4c21484c6d1bd9b4c82b3f1dbb2d2",
+        "size_bytes": 29801
+      },
+      "render-support-message.txt": {
+        "sha256": "2d8967173269226c9a0bcb8cf68979ecce164cf29dba88617664f4df55377ad7",
+        "size_bytes": 2406
+      },
+      "render-support-payload.json": {
+        "sha256": "e4e2f9747f87054ad5c20a9baad74fa8ac37d30957d696f029c2e0f5bf04b3d1",
+        "size_bytes": 1392
+      }
+    },
     "escalation_recommendation": {
       "destination": "Render support",
       "owner": "Traction",
       "prerequisite": "Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY",
       "recommended_message": "Traction should escalate to Render support. Escalate immediately. The outage is externally isolated and has repeated without material recovery. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY",
       "severity": "critical",
-      "unchanged_blocked_streak": 13,
+      "unchanged_blocked_streak": 14,
       "urgency": "Escalate immediately. The outage is externally isolated and has repeated without material recovery."
     },
     "executive_summary_lines": [
@@ -463,19 +491,19 @@
       "Render evidence: app attachment_state=healthy-attached with x-render-origin-server=TornadoServer/6.5.5, webhook attachment_state=missing-backend-attachment with x-render-routing=no-server.",
       "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.",
       "Live verification shell still needs secrets before the final Stripe run: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY",
-      "Escalation: severity=critical owner=Traction destination=Render support unchanged_blocked_streak=13.",
+      "Escalation: severity=critical owner=Traction destination=Render support unchanged_blocked_streak=14.",
       "Traction should escalate to Render support. Escalate immediately. The outage is externally isolated and has repeated without material recovery. Live E2E shell still needs secrets before the final Stripe confirmation: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY"
     ],
     "incident_history": {
       "artifact_count": 14,
       "blocked_artifact_count": 14,
-      "blocked_duration": "3d 6h 0m",
-      "current_state_duration": "3d 3h 59m",
+      "blocked_duration": "3d 7h 59m",
+      "current_state_duration": "3d 5h 58m",
       "current_state_started_at": "2026-04-02T07:18:14.875837+00:00",
       "first_blocked_at": "2026-04-02T05:17:10.778608+00:00",
       "first_no_server_at": "2026-04-02T07:18:14.875837+00:00",
       "latest_status": "blocked",
-      "no_server_duration": "3d 3h 59m"
+      "no_server_duration": "3d 5h 58m"
     },
     "local_webhook_dependency_commands": [
       "python3 -m pip install flask stripe",
@@ -518,8 +546,8 @@
       ]
     },
     "owner_ready_messages": {
-      "render_support": "Render support request generated 2026-04-05T11:17:32.923153+00:00: commission-tracker-app.onrender.com/ is healthy at HTTP 200 with attachment_state=healthy-attached, but commission-tracker-webhook.onrender.com/health is HTTP 404 with attachment_state=missing-backend-attachment and x-render-routing=no-server. Please confirm commission-tracker-webhook owns the webhook hostname, redeploy the service, and retest /health until the route returns 200 without x-render-routing=no-server. Next actions: Confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook, not a stale or missing backend. Redeploy commission-tracker-webhook and verify the runtime comes up healthy behind the public hostname.",
-      "traction": "Traction handoff at 2026-04-05T11:17:32.923153+00:00: commission-tracker-app.onrender.com/ is healthy at HTTP 200 while commission-tracker-webhook.onrender.com/health is still HTTP 404 with x-render-routing=no-server. Forward the attached Render escalation packet, ask Render to confirm the webhook hostname is attached to commission-tracker-webhook, redeploy it, and then have the verification shell rerun the smoke check. Next actions: Forward the Render escalation message and support packet without rewriting the evidence. Attach the latest smoke-check JSON, smoke-check Markdown, trial-signup report, and render.yaml from the artifact inventory.",
+      "render_support": "Render support request generated 2026-04-05T13:17:05.574510+00:00: commission-tracker-app.onrender.com/ is healthy at HTTP 200 with attachment_state=healthy-attached, but commission-tracker-webhook.onrender.com/health is HTTP 404 with attachment_state=missing-backend-attachment and x-render-routing=no-server. Please confirm commission-tracker-webhook owns the webhook hostname, redeploy the service, and retest /health until the route returns 200 without x-render-routing=no-server. Next actions: Confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook, not a stale or missing backend. Redeploy commission-tracker-webhook and verify the runtime comes up healthy behind the public hostname.",
+      "traction": "Traction handoff at 2026-04-05T13:17:05.574510+00:00: commission-tracker-app.onrender.com/ is healthy at HTTP 200 while commission-tracker-webhook.onrender.com/health is still HTTP 404 with x-render-routing=no-server. Forward the attached Render escalation packet, ask Render to confirm the webhook hostname is attached to commission-tracker-webhook, redeploy it, and then have the verification shell rerun the smoke check. Next actions: Forward the Render escalation message and support packet without rewriting the evidence. Attach the latest smoke-check JSON, smoke-check Markdown, trial-signup report, and render.yaml from the artifact inventory.",
       "verification_shell": "Verification-shell handoff: rerun python3 scripts/trial_signup_smoke_check.py after Render reports the webhook service healthy, refresh the JSON and Markdown artifacts, and only run the real Stripe test-mode signup after ready_for_live_e2e turns true. Missing live E2E secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY. Next actions: Re-run python3 scripts/trial_signup_smoke_check.py after Render reports the webhook deploy is healthy. Refresh the JSON and Markdown smoke-check artifacts before attempting any live Stripe path."
     },
     "public_app_ok": true,
@@ -612,12 +640,12 @@
         "If Render still returns x-render-routing=no-server, remove any stale domain attachment and reattach the webhook hostname to commission-tracker-webhook before redeploying."
       ]
     },
-    "render_escalation_message": "Render support request for AMS-APP webhook routing outage.\nGenerated at 2026-04-05T11:17:32.923153+00:00.\nRepo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.\nHealthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.\nBroken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.\nRequested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.\nRecommended recovery steps:\n- 1. Render dashboard: open commission-tracker-webhook first because the smoke check isolated the incident to the webhook hostname, not the main app.\n- 2. Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook while commission-tracker-app.onrender.com remains attached to commission-tracker-app.\n- 3. If the webhook hostname is missing or attached to the wrong service, remove the stale attachment, reattach it to commission-tracker-webhook, and save.\n- 4. Build & Deploy: confirm the deployed start command is gunicorn webhook_server:app --bind 0.0.0.0:${PORT} and trigger a manual deploy if Render has stale runtime state.\n- 5. Wait for Render to report a healthy instance, then probe /health again before attempting any Stripe flow.\n- 6. Load the missing webhook runtime values in Render or the verification shell: APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_KEY\n- 7. Before the real signup test, load the remaining live E2E secrets into the verification shell: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY\n- 8. Re-run python3 scripts/trial_signup_smoke_check.py and only run a real Stripe test-mode signup after ready_for_live_e2e flips to true.",
+    "render_escalation_message": "Render support request for AMS-APP webhook routing outage.\nGenerated at 2026-04-05T13:17:05.574510+00:00.\nRepo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.\nHealthy app host evidence: commission-tracker-app.onrender.com/ -> HTTP 200 OK with attachment_state=healthy-attached and x-render-origin-server=TornadoServer/6.5.5.\nBroken webhook host evidence: commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found with attachment_state=missing-backend-attachment and x-render-routing=no-server.\nRequested action: Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.\nRecommended recovery steps:\n- 1. Render dashboard: open commission-tracker-webhook first because the smoke check isolated the incident to the webhook hostname, not the main app.\n- 2. Custom Domains: confirm commission-tracker-webhook.onrender.com is attached to commission-tracker-webhook while commission-tracker-app.onrender.com remains attached to commission-tracker-app.\n- 3. If the webhook hostname is missing or attached to the wrong service, remove the stale attachment, reattach it to commission-tracker-webhook, and save.\n- 4. Build & Deploy: confirm the deployed start command is gunicorn webhook_server:app --bind 0.0.0.0:${PORT} and trigger a manual deploy if Render has stale runtime state.\n- 5. Wait for Render to report a healthy instance, then probe /health again before attempting any Stripe flow.\n- 6. Load the missing webhook runtime values in Render or the verification shell: APP_ENVIRONMENT, FROM_EMAIL, PRODUCTION_SUPABASE_ANON_KEY, PRODUCTION_SUPABASE_SERVICE_KEY, PRODUCTION_SUPABASE_URL, RENDER_APP_URL, RESEND_API_KEY, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER, STRIPE_PRICE_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_KEY\n- 7. Before the real signup test, load the remaining live E2E secrets into the verification shell: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, RESEND_API_KEY, SUPABASE_SERVICE_KEY\n- 8. Re-run python3 scripts/trial_signup_smoke_check.py and only run a real Stripe test-mode signup after ready_for_live_e2e flips to true.",
     "render_escalation_payload": {
       "app_host_evidence": "commission-tracker-app.onrender.com/ -> HTTP 200 OK attachment_state=healthy-attached x-render-origin-server=TornadoServer/6.5.5",
       "destination": "Render support",
       "external_routing_issue": true,
-      "generated_at": "2026-04-05T11:17:32.923153+00:00",
+      "generated_at": "2026-04-05T13:17:05.574510+00:00",
       "incident_type": "render-webhook-routing-outage",
       "missing_live_e2e_secrets": [
         "STRIPE_SECRET_KEY",
@@ -632,7 +660,7 @@
       "requested_action": "Confirm the webhook hostname is attached to commission-tracker-webhook, redeploy the service, and recheck /health until x-render-routing=no-server disappears.",
       "severity": "critical",
       "ticket_title": "AMS-APP Render webhook routing outage blocks live Stripe signup path",
-      "unchanged_blocked_streak": 13,
+      "unchanged_blocked_streak": 14,
       "webhook_host_evidence": "commission-tracker-webhook.onrender.com/health -> HTTP 404 Not Found attachment_state=missing-backend-attachment x-render-routing=no-server"
     },
     "render_hostname_diagnostics": {
@@ -782,12 +810,12 @@
     "render_support_packet": {
       "conclusion": "Repo-side checkout, webhook, and Render blueprint contracts are green while the app hostname is healthy-attached and the webhook hostname is missing-backend-attachment. This points to an external Render service or domain binding problem, not an app-code route regression.",
       "external_routing_issue": true,
-      "generated_at": "2026-04-05T11:17:32.923153+00:00",
+      "generated_at": "2026-04-05T13:17:05.574510+00:00",
       "host_comparison": {
         "commission-tracker-app": {
           "attachment_state": "healthy-attached",
-          "cf_ray": "9e7825a11974d962-IAD",
-          "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+          "cf_ray": "9e78d4bf2d5ff90b-IAD",
+          "date": "Sun, 05 Apr 2026 13:17:05 GMT",
           "host": "commission-tracker-app.onrender.com",
           "probe_path": "/",
           "reason": "OK",
@@ -797,8 +825,8 @@
         },
         "commission-tracker-webhook": {
           "attachment_state": "missing-backend-attachment",
-          "cf_ray": "9e7825a1bac787a2-IAD",
-          "date": "Sun, 05 Apr 2026 11:17:33 GMT",
+          "cf_ray": "9e78d4c039478b02-IAD",
+          "date": "Sun, 05 Apr 2026 13:17:06 GMT",
           "host": "commission-tracker-webhook.onrender.com",
           "probe_path": "/health",
           "reason": "Not Found",

@@ -1418,6 +1418,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("- both: python3 scripts/trial_signup_smoke_check.py --json-out docs/smoke-checks/latest-trial-signup-smoke-check.json --markdown-out docs/smoke-checks/latest-trial-signup-smoke-check.md", markdown)
         self.assertIn("## Artifact inventory", markdown)
         self.assertIn("- recommended_attachments: docs/smoke-checks/latest-trial-signup-smoke-check.json, docs/smoke-checks/latest-trial-signup-smoke-check.md, docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md, render.yaml, docs/smoke-checks/owner-ready/traction.txt, docs/smoke-checks/owner-ready/render_support.txt", markdown)
+        self.assertIn("## Escalation packet hashes", markdown)
         self.assertIn("## Owner action plan", markdown)
         self.assertIn("## Render recovery playbook", markdown)
         self.assertIn("## Recovery exit criteria", markdown)
@@ -1583,6 +1584,32 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
                 (pathlib.Path(temp_dir) / "2026-04-05T05-14-58-289624-00-00-traction.txt").read_text(encoding="utf-8"),
             )
 
+    def test_build_escalation_packet_hashes_captures_packet_and_artifact_digests(self):
+        report = self._build_ready_report()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            latest_json = root / "docs" / "smoke-checks" / "latest-trial-signup-smoke-check.json"
+            latest_markdown = root / "docs" / "smoke-checks" / "latest-trial-signup-smoke-check.md"
+            latest_json.parent.mkdir(parents=True)
+            latest_json.write_text('{"ok": true}\n', encoding="utf-8")
+            latest_markdown.write_text('# snapshot\n', encoding="utf-8")
+            report["summary"]["artifact_inventory"] = {
+                "latest_json": {"path": "docs/smoke-checks/latest-trial-signup-smoke-check.json"},
+                "latest_markdown": {"path": "docs/smoke-checks/latest-trial-signup-smoke-check.md"},
+            }
+
+            with mock.patch.object(smoke, "ROOT", root):
+                hashes = smoke.build_escalation_packet_hashes(
+                    report,
+                    {"render-support-message.txt": "hello\n", "render-support-payload.json": '{"a":1}\n'},
+                )
+
+        self.assertIn("render-support-message.txt", hashes)
+        self.assertEqual(hashes["render-support-message.txt"]["size_bytes"], len("hello\n".encode("utf-8")))
+        self.assertEqual(hashes["latest-trial-signup-smoke-check.json"]["path"], "docs/smoke-checks/latest-trial-signup-smoke-check.json")
+        self.assertEqual(len(hashes["latest-trial-signup-smoke-check.json"]["sha256"]), 64)
+
     def test_build_escalation_packet_readme_summarizes_packet_contents(self):
         report = self._build_ready_report()
         report["generated_at"] = "2026-04-05T05:14:58.289624+00:00"
@@ -1599,6 +1626,9 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             "requested_action": "Reattach the webhook hostname and redeploy.",
             "missing_live_e2e_secrets": ["STRIPE_SECRET_KEY", "RESEND_API_KEY"],
         }
+        report["summary"]["escalation_packet_hashes"] = {
+            "render-support-message.txt": {"sha256": "abc123", "size_bytes": 12},
+        }
 
         readme = smoke.build_escalation_packet_readme(report)
 
@@ -1607,6 +1637,9 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertIn("- render.yaml", readme)
         self.assertIn("- docs/smoke-checks/latest-trial-signup-smoke-check.json", readme)
         self.assertIn("- STRIPE_SECRET_KEY", readme)
+        self.assertIn("Integrity hashes:", readme)
+        self.assertIn("render-support-message.txt: sha256=abc123 size_bytes=12", readme)
+        self.assertIn("compare the attached files against the sha256 hashes", readme)
         self.assertIn("Send render-support-message.txt as the support message body.", readme)
 
     def test_write_escalation_packet_writes_send_ready_files(self):
@@ -1641,6 +1674,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             manifest = json.loads((pathlib.Path(temp_dir) / "evidence-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["generated_at"], "2026-04-05T05:14:58.289624+00:00")
             self.assertIn("render.yaml", manifest["render_support_packet_files"])
+            self.assertIn("packet_hashes", manifest)
+            self.assertIn("render-support-message.txt", manifest["packet_hashes"])
+            self.assertIn("evidence-manifest.json", manifest["packet_hashes"])
+            self.assertEqual(len(manifest["packet_hashes"]["render-support-message.txt"]["sha256"]), 64)
             self.assertIn("AMS-APP Render Escalation Packet", (pathlib.Path(temp_dir) / "README.txt").read_text(encoding="utf-8"))
 
     def test_build_escalation_packet_archive_file_paths_uses_generated_at_slug(self):

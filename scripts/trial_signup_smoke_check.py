@@ -16,6 +16,7 @@ Checks performed:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -1349,6 +1350,37 @@ def build_escalation_packet_archive_file_paths(report: dict[str, Any], archive_d
     }
 
 
+def build_escalation_packet_hashes(report: dict[str, Any], file_contents: dict[str, str]) -> dict[str, dict[str, Any]]:
+    inventory = report.get("summary", {}).get("artifact_inventory", {})
+    hashes: dict[str, dict[str, Any]] = {}
+
+    for filename, content in file_contents.items():
+        hashes[filename] = {
+            "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            "size_bytes": len(content.encode("utf-8")),
+        }
+
+    latest_json_path = inventory.get("latest_json", {}).get("path")
+    latest_markdown_path = inventory.get("latest_markdown", {}).get("path")
+    for label, relative_path in {
+        "latest-trial-signup-smoke-check.json": latest_json_path,
+        "latest-trial-signup-smoke-check.md": latest_markdown_path,
+    }.items():
+        if not relative_path:
+            continue
+        path = ROOT / relative_path
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8")
+        hashes[label] = {
+            "path": relative_path,
+            "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            "size_bytes": len(content.encode("utf-8")),
+        }
+
+    return hashes
+
+
 def build_escalation_packet_readme(report: dict[str, Any]) -> str:
     summary = report.get("summary", {})
     inventory = summary.get("artifact_inventory", {})
@@ -1356,6 +1388,7 @@ def build_escalation_packet_readme(report: dict[str, Any]) -> str:
     packet_files = inventory.get("render_support_packet_files", [])
     recommended = inventory.get("recommended_attachments", [])
     missing_secrets = payload.get("missing_live_e2e_secrets", [])
+    packet_hashes = summary.get("escalation_packet_hashes", {})
 
     lines = [
         "AMS-APP Render Escalation Packet",
@@ -1388,12 +1421,24 @@ def build_escalation_packet_readme(report: dict[str, Any]) -> str:
         for item in missing_secrets:
             lines.append(f"- {item}")
 
+    if packet_hashes:
+        lines.extend([
+            "",
+            "Integrity hashes:",
+        ])
+        for filename, details in sorted(packet_hashes.items()):
+            path_note = f" path={details['path']}" if details.get("path") else ""
+            lines.append(
+                f"- {filename}:{path_note} sha256={details['sha256']} size_bytes={details['size_bytes']}"
+            )
+
     lines.extend([
         "",
         "If forwarding to Render support:",
         "1. Send render-support-message.txt as the support message body.",
         "2. Attach render-support-payload.json and evidence-manifest.json.",
         "3. Include the latest smoke-check JSON/Markdown artifacts and render.yaml from the packet file list above.",
+        "4. If packet integrity is questioned later, compare the attached files against the sha256 hashes listed above.",
     ])
 
     return "\n".join(lines).rstrip() + "\n"
@@ -2070,6 +2115,22 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## Escalation packet hashes",
+        ]
+    )
+    for filename, details in summary.get("escalation_packet_hashes", {}).items():
+        lines.append(
+            "- {}: sha256={}; size_bytes={}; path={}".format(
+                filename,
+                details.get("sha256"),
+                details.get("size_bytes"),
+                details.get("path") or "None",
+            )
+        )
+
+    lines.extend(
+        [
+            "",
             "## Owner action plan",
         ]
     )
@@ -2224,22 +2285,47 @@ def build_escalation_packet_file_contents(report: dict[str, Any]) -> dict[str, s
     message = summary.get("render_escalation_message", "")
     inventory = summary.get("artifact_inventory", {})
 
-    return {
+    base_files = {
         "render-support-message.txt": str(message).rstrip() + "\n",
         "render-support-payload.json": json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        "evidence-manifest.json": json.dumps(
-            {
-                "generated_at": report.get("generated_at"),
-                "recommended_attachments": inventory.get("recommended_attachments", []),
-                "render_support_packet_files": inventory.get("render_support_packet_files", []),
-                "traction_handoff_files": inventory.get("traction_handoff_files", []),
-                "artifact_inventory": inventory,
-            },
-            indent=2,
-            sort_keys=True,
-        ) + "\n",
-        "README.txt": build_escalation_packet_readme(report),
     }
+    packet_hashes = build_escalation_packet_hashes(report, base_files)
+    report.setdefault("summary", {})["escalation_packet_hashes"] = packet_hashes
+
+    base_files["evidence-manifest.json"] = json.dumps(
+        {
+            "generated_at": report.get("generated_at"),
+            "recommended_attachments": inventory.get("recommended_attachments", []),
+            "render_support_packet_files": inventory.get("render_support_packet_files", []),
+            "traction_handoff_files": inventory.get("traction_handoff_files", []),
+            "artifact_inventory": inventory,
+            "packet_hashes": packet_hashes,
+        },
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    packet_hashes = build_escalation_packet_hashes(report, base_files)
+    report["summary"]["escalation_packet_hashes"] = packet_hashes
+    base_files["evidence-manifest.json"] = json.dumps(
+        {
+            "generated_at": report.get("generated_at"),
+            "recommended_attachments": inventory.get("recommended_attachments", []),
+            "render_support_packet_files": inventory.get("render_support_packet_files", []),
+            "traction_handoff_files": inventory.get("traction_handoff_files", []),
+            "artifact_inventory": inventory,
+            "packet_hashes": packet_hashes,
+        },
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    packet_hashes = build_escalation_packet_hashes(report, base_files)
+    report["summary"]["escalation_packet_hashes"] = packet_hashes
+    base_files["README.txt"] = build_escalation_packet_readme(report)
+    packet_hashes = build_escalation_packet_hashes(report, base_files)
+    report["summary"]["escalation_packet_hashes"] = packet_hashes
+    base_files["README.txt"] = build_escalation_packet_readme(report)
+
+    return base_files
 
 
 def write_escalation_packet(report: dict[str, Any], output_dir: str) -> list[Path]:
