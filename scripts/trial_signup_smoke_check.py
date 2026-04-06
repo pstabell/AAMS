@@ -1695,6 +1695,24 @@ def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any
             if not exists:
                 missing_files.append(f"{group}:{name}")
 
+    owner_ready_messages = report.get("summary", {}).get("owner_ready_messages", {})
+    owner_ready_content_verification = {
+        "checked_count": len(owner_archive_paths),
+        "matching_files": [],
+        "mismatched_files": [],
+        "ok": True,
+    }
+    for owner, path in owner_archive_paths.items():
+        if not path.exists():
+            continue
+        expected_content = str(owner_ready_messages.get(owner, "")).rstrip() + "\n"
+        actual_content = path.read_text(encoding="utf-8")
+        if actual_content == expected_content:
+            owner_ready_content_verification["matching_files"].append(owner)
+        else:
+            owner_ready_content_verification["mismatched_files"].append(owner)
+    owner_ready_content_verification["ok"] = not owner_ready_content_verification["mismatched_files"]
+
     packet_bundle_verification = None
     archived_bundle_path = packet_archive_paths.get("escalation-packet.zip")
     archived_checksum_path = packet_archive_paths.get("escalation-packet.zip.sha256")
@@ -1714,6 +1732,25 @@ def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any
             "checksum_matches": False,
         }
 
+    packet_files_to_verify = build_escalation_packet_file_contents(report)
+    escalation_packet_content_verification = {
+        "checked_count": 0,
+        "matching_files": [],
+        "mismatched_files": [],
+        "ok": True,
+    }
+    for filename, expected_content in packet_files_to_verify.items():
+        archived_path = packet_archive_paths.get(filename)
+        if archived_path is None or not archived_path.exists():
+            continue
+        escalation_packet_content_verification["checked_count"] += 1
+        actual_content = archived_path.read_text(encoding="utf-8")
+        if actual_content == expected_content:
+            escalation_packet_content_verification["matching_files"].append(filename)
+        else:
+            escalation_packet_content_verification["mismatched_files"].append(filename)
+    escalation_packet_content_verification["ok"] = not escalation_packet_content_verification["mismatched_files"]
+
     return {
         "generated_at": report.get("generated_at"),
         "missing_files": missing_files,
@@ -1721,9 +1758,16 @@ def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any
         "owner_ready_archive_present_count": sum(1 for path in owner_archive_paths.values() if path.exists()),
         "escalation_packet_archive_expected_count": len(packet_archive_paths),
         "escalation_packet_archive_present_count": sum(1 for path in packet_archive_paths.values() if path.exists()),
+        "owner_ready_content_verification": owner_ready_content_verification,
+        "escalation_packet_content_verification": escalation_packet_content_verification,
         "packet_bundle_verification": packet_bundle_verification,
         "files": existing_files,
-        "ok": not missing_files and packet_bundle_verification.get("checksum_matches", False),
+        "ok": (
+            not missing_files
+            and owner_ready_content_verification.get("ok", False)
+            and escalation_packet_content_verification.get("ok", False)
+            and packet_bundle_verification.get("checksum_matches", False)
+        ),
     }
 
 def build_owner_ready_messages(
@@ -2356,6 +2400,8 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     archive_verification = summary.get("archive_snapshot_verification")
     if archive_verification:
         packet_bundle = archive_verification.get("packet_bundle_verification", {})
+        owner_ready_content = archive_verification.get("owner_ready_content_verification", {})
+        escalation_packet_content = archive_verification.get("escalation_packet_content_verification", {})
         lines.extend(
             [
                 "",
@@ -2363,6 +2409,12 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 f"- Overall status: {'PASS' if archive_verification.get('ok') else 'FAIL'}",
                 f"- Owner-ready archive present: {archive_verification.get('owner_ready_archive_present_count', 0)}/{archive_verification.get('owner_ready_archive_expected_count', 0)}",
                 f"- Escalation-packet archive present: {archive_verification.get('escalation_packet_archive_present_count', 0)}/{archive_verification.get('escalation_packet_archive_expected_count', 0)}",
+                f"- Owner-ready archive content matches latest: {'YES' if owner_ready_content.get('ok') else 'NO'}",
+                f"- Owner-ready matching files: {', '.join(owner_ready_content.get('matching_files', [])) or 'None'}",
+                f"- Owner-ready mismatched files: {', '.join(owner_ready_content.get('mismatched_files', [])) or 'None'}",
+                f"- Escalation-packet archive content matches latest: {'YES' if escalation_packet_content.get('ok') else 'NO'}",
+                f"- Escalation-packet matching files: {', '.join(escalation_packet_content.get('matching_files', [])) or 'None'}",
+                f"- Escalation-packet mismatched files: {', '.join(escalation_packet_content.get('mismatched_files', [])) or 'None'}",
                 f"- Archived bundle checksum matches: {'YES' if packet_bundle.get('checksum_matches') else 'NO'}",
                 "- Missing archive files: " + (", ".join(archive_verification.get('missing_files', [])) or 'None'),
                 f"- Archived bundle path: {packet_bundle.get('bundle_path') or 'None'}",

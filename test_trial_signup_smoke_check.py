@@ -2134,19 +2134,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             owner_archive_dir.mkdir(parents=True)
             packet_archive_dir.mkdir(parents=True)
 
-            owner_paths = smoke.build_owner_ready_archive_file_paths(report, owner_archive_dir)
-            for path in owner_paths.values():
-                path.write_text("ok\n", encoding="utf-8")
-
-            packet_paths = smoke.build_escalation_packet_archive_file_paths(report, packet_archive_dir)
-            for name, path in packet_paths.items():
-                if name == "escalation-packet.zip":
-                    path.write_bytes(b"archive-bundle")
-                elif name == "escalation-packet.zip.sha256":
-                    digest = smoke.hashlib.sha256((packet_archive_dir / path.name.replace('.sha256', '')).read_bytes()).hexdigest()
-                    path.write_text(f"{digest}  {(packet_archive_dir / path.name.replace('.sha256', '')).name}\n", encoding="utf-8")
-                else:
-                    path.write_text("ok\n", encoding="utf-8")
+            smoke.write_owner_ready_archive(report, owner_archive_dir)
+            smoke.write_escalation_packet_archive(report, packet_archive_dir)
 
             with mock.patch.object(smoke, "DEFAULT_OWNER_READY_ARCHIVE_DIR", owner_archive_dir), mock.patch.object(smoke, "DEFAULT_ESCALATION_PACKET_ARCHIVE_DIR", packet_archive_dir):
                 verification = smoke.build_archive_snapshot_verification(report)
@@ -2155,6 +2144,10 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertEqual(verification["owner_ready_archive_present_count"], 3)
         self.assertEqual(verification["escalation_packet_archive_present_count"], 6)
         self.assertEqual(verification["missing_files"], [])
+        self.assertTrue(verification["owner_ready_content_verification"]["ok"])
+        self.assertEqual(sorted(verification["owner_ready_content_verification"]["matching_files"]), ["render_support", "traction", "verification_shell"])
+        self.assertTrue(verification["escalation_packet_content_verification"]["ok"])
+        self.assertIn("render-support-message.txt", verification["escalation_packet_content_verification"]["matching_files"])
         self.assertTrue(verification["packet_bundle_verification"]["checksum_matches"])
 
     def test_build_archive_snapshot_verification_flags_missing_archives(self):
@@ -2173,7 +2166,40 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
 
         self.assertFalse(verification["ok"])
         self.assertGreaterEqual(len(verification["missing_files"]), 1)
+        self.assertEqual(verification["owner_ready_content_verification"]["matching_files"], [])
+        self.assertEqual(verification["owner_ready_content_verification"]["mismatched_files"], [])
+        self.assertEqual(verification["escalation_packet_content_verification"]["matching_files"], [])
+        self.assertEqual(verification["escalation_packet_content_verification"]["mismatched_files"], [])
         self.assertFalse(verification["packet_bundle_verification"]["checksum_matches"])
+
+    def test_build_archive_snapshot_verification_detects_content_drift(self):
+        report = self._build_ready_report()
+        report["generated_at"] = "2026-04-06T09:17:00+00:00"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            owner_archive_dir = root / "docs" / "smoke-checks" / "owner-ready" / "archive"
+            packet_archive_dir = root / "docs" / "smoke-checks" / "escalation-packet" / "archive"
+            owner_archive_dir.mkdir(parents=True)
+            packet_archive_dir.mkdir(parents=True)
+
+            smoke.write_owner_ready_archive(report, owner_archive_dir)
+            smoke.write_escalation_packet_archive(report, packet_archive_dir)
+
+            first_owner_archive = next(owner_archive_dir.glob("*-traction.txt"))
+            first_owner_archive.write_text("tampered traction\n", encoding="utf-8")
+            first_packet_archive = next(packet_archive_dir.glob("*-render-support-message.txt"))
+            first_packet_archive.write_text("tampered packet\n", encoding="utf-8")
+
+            with mock.patch.object(smoke, "DEFAULT_OWNER_READY_ARCHIVE_DIR", owner_archive_dir), mock.patch.object(smoke, "DEFAULT_ESCALATION_PACKET_ARCHIVE_DIR", packet_archive_dir):
+                verification = smoke.build_archive_snapshot_verification(report)
+
+        self.assertFalse(verification["ok"])
+        self.assertFalse(verification["owner_ready_content_verification"]["ok"])
+        self.assertEqual(verification["owner_ready_content_verification"]["mismatched_files"], ["traction"])
+        self.assertFalse(verification["escalation_packet_content_verification"]["ok"])
+        self.assertEqual(verification["escalation_packet_content_verification"]["mismatched_files"], ["render-support-message.txt"])
+        self.assertTrue(verification["packet_bundle_verification"]["checksum_matches"])
 
     def test_main_reports_artifact_freshness_surfaces_nondefault_output_paths_as_stale(self):
         report = self._build_ready_report()
