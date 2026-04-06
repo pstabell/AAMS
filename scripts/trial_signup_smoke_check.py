@@ -1669,6 +1669,63 @@ def build_artifact_freshness(report: dict[str, Any]) -> dict[str, Any]:
         "files": files,
     }
 
+
+def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any]:
+    owner_archive_paths = build_owner_ready_archive_file_paths(report, DEFAULT_OWNER_READY_ARCHIVE_DIR)
+    packet_archive_paths = build_escalation_packet_archive_file_paths(report, DEFAULT_ESCALATION_PACKET_ARCHIVE_DIR)
+
+    expected_paths = {
+        "owner_ready_archive": {owner: path for owner, path in owner_archive_paths.items()},
+        "escalation_packet_archive": {name: path for name, path in packet_archive_paths.items()},
+    }
+
+    missing_files: list[str] = []
+    existing_files: dict[str, dict[str, Any]] = {}
+
+    for group, paths in expected_paths.items():
+        existing_files[group] = {}
+        for name, path in paths.items():
+            exists = path.exists()
+            existing_files[group][name] = {
+                "path": _display_path(path),
+                "exists": exists,
+                "size_bytes": path.stat().st_size if exists else 0,
+                "modified_at": datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat() if exists else None,
+            }
+            if not exists:
+                missing_files.append(f"{group}:{name}")
+
+    packet_bundle_verification = None
+    archived_bundle_path = packet_archive_paths.get("escalation-packet.zip")
+    archived_checksum_path = packet_archive_paths.get("escalation-packet.zip.sha256")
+    if archived_bundle_path and archived_checksum_path and archived_bundle_path.exists() and archived_checksum_path.exists():
+        checksum_text = archived_checksum_path.read_text(encoding="utf-8").strip()
+        recorded_hash = checksum_text.split()[0] if checksum_text else ""
+        actual_hash = hashlib.sha256(archived_bundle_path.read_bytes()).hexdigest()
+        packet_bundle_verification = {
+            "bundle_path": _display_path(archived_bundle_path),
+            "checksum_path": _display_path(archived_checksum_path),
+            "checksum_matches": bool(recorded_hash) and recorded_hash == actual_hash,
+        }
+    else:
+        packet_bundle_verification = {
+            "bundle_path": _display_path(archived_bundle_path) if archived_bundle_path else None,
+            "checksum_path": _display_path(archived_checksum_path) if archived_checksum_path else None,
+            "checksum_matches": False,
+        }
+
+    return {
+        "generated_at": report.get("generated_at"),
+        "missing_files": missing_files,
+        "owner_ready_archive_expected_count": len(owner_archive_paths),
+        "owner_ready_archive_present_count": sum(1 for path in owner_archive_paths.values() if path.exists()),
+        "escalation_packet_archive_expected_count": len(packet_archive_paths),
+        "escalation_packet_archive_present_count": sum(1 for path in packet_archive_paths.values() if path.exists()),
+        "packet_bundle_verification": packet_bundle_verification,
+        "files": existing_files,
+        "ok": not missing_files and packet_bundle_verification.get("checksum_matches", False),
+    }
+
 def build_owner_ready_messages(
     report: dict[str, Any],
     render_support_packet: dict[str, Any],
@@ -2296,6 +2353,23 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             ]
         )
 
+    archive_verification = summary.get("archive_snapshot_verification")
+    if archive_verification:
+        packet_bundle = archive_verification.get("packet_bundle_verification", {})
+        lines.extend(
+            [
+                "",
+                "## Archive snapshot verification",
+                f"- Overall status: {'PASS' if archive_verification.get('ok') else 'FAIL'}",
+                f"- Owner-ready archive present: {archive_verification.get('owner_ready_archive_present_count', 0)}/{archive_verification.get('owner_ready_archive_expected_count', 0)}",
+                f"- Escalation-packet archive present: {archive_verification.get('escalation_packet_archive_present_count', 0)}/{archive_verification.get('escalation_packet_archive_expected_count', 0)}",
+                f"- Archived bundle checksum matches: {'YES' if packet_bundle.get('checksum_matches') else 'NO'}",
+                "- Missing archive files: " + (", ".join(archive_verification.get('missing_files', [])) or 'None'),
+                f"- Archived bundle path: {packet_bundle.get('bundle_path') or 'None'}",
+                f"- Archived checksum path: {packet_bundle.get('checksum_path') or 'None'}",
+            ]
+        )
+
     lines.extend(
         [
             "",
@@ -2695,6 +2769,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report["summary"]["artifact_inventory"] = build_artifact_inventory()
     report["summary"]["artifact_freshness"] = build_artifact_freshness(report)
+    report["summary"]["archive_snapshot_verification"] = build_archive_snapshot_verification(report)
     refreshed_payload = json.dumps(report, indent=2, sort_keys=True)
     if args.json_out:
         Path(args.json_out).write_text(refreshed_payload + "\n", encoding="utf-8")

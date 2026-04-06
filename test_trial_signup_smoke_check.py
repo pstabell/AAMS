@@ -2123,6 +2123,58 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertTrue(freshness["files"]["latest_json"]["fresh_for_run"])
         self.assertFalse(freshness["files"]["owner_ready_traction"]["fresh_for_run"])
 
+    def test_build_archive_snapshot_verification_reports_current_run_archives(self):
+        report = self._build_ready_report()
+        report["generated_at"] = "2026-04-06T09:17:00+00:00"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            owner_archive_dir = root / "docs" / "smoke-checks" / "owner-ready" / "archive"
+            packet_archive_dir = root / "docs" / "smoke-checks" / "escalation-packet" / "archive"
+            owner_archive_dir.mkdir(parents=True)
+            packet_archive_dir.mkdir(parents=True)
+
+            owner_paths = smoke.build_owner_ready_archive_file_paths(report, owner_archive_dir)
+            for path in owner_paths.values():
+                path.write_text("ok\n", encoding="utf-8")
+
+            packet_paths = smoke.build_escalation_packet_archive_file_paths(report, packet_archive_dir)
+            for name, path in packet_paths.items():
+                if name == "escalation-packet.zip":
+                    path.write_bytes(b"archive-bundle")
+                elif name == "escalation-packet.zip.sha256":
+                    digest = smoke.hashlib.sha256((packet_archive_dir / path.name.replace('.sha256', '')).read_bytes()).hexdigest()
+                    path.write_text(f"{digest}  {(packet_archive_dir / path.name.replace('.sha256', '')).name}\n", encoding="utf-8")
+                else:
+                    path.write_text("ok\n", encoding="utf-8")
+
+            with mock.patch.object(smoke, "DEFAULT_OWNER_READY_ARCHIVE_DIR", owner_archive_dir), mock.patch.object(smoke, "DEFAULT_ESCALATION_PACKET_ARCHIVE_DIR", packet_archive_dir):
+                verification = smoke.build_archive_snapshot_verification(report)
+
+        self.assertTrue(verification["ok"])
+        self.assertEqual(verification["owner_ready_archive_present_count"], 3)
+        self.assertEqual(verification["escalation_packet_archive_present_count"], 6)
+        self.assertEqual(verification["missing_files"], [])
+        self.assertTrue(verification["packet_bundle_verification"]["checksum_matches"])
+
+    def test_build_archive_snapshot_verification_flags_missing_archives(self):
+        report = self._build_ready_report()
+        report["generated_at"] = "2026-04-06T09:17:00+00:00"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            owner_archive_dir = root / "docs" / "smoke-checks" / "owner-ready" / "archive"
+            packet_archive_dir = root / "docs" / "smoke-checks" / "escalation-packet" / "archive"
+            owner_archive_dir.mkdir(parents=True)
+            packet_archive_dir.mkdir(parents=True)
+
+            with mock.patch.object(smoke, "DEFAULT_OWNER_READY_ARCHIVE_DIR", owner_archive_dir), mock.patch.object(smoke, "DEFAULT_ESCALATION_PACKET_ARCHIVE_DIR", packet_archive_dir):
+                verification = smoke.build_archive_snapshot_verification(report)
+
+        self.assertFalse(verification["ok"])
+        self.assertGreaterEqual(len(verification["missing_files"]), 1)
+        self.assertFalse(verification["packet_bundle_verification"]["checksum_matches"])
+
     def test_main_reports_artifact_freshness_surfaces_nondefault_output_paths_as_stale(self):
         report = self._build_ready_report()
 
@@ -2147,12 +2199,13 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertEqual(exit_code, 0)
             saved_payload = json.loads(json_path.read_text())
             self.assertIn("artifact_freshness", saved_payload["summary"])
-            self.assertIn("artifact_freshness", saved_payload["summary"])
+            self.assertIn("archive_snapshot_verification", saved_payload["summary"])
             self.assertFalse(saved_payload["summary"]["artifact_freshness"]["all_fresh"])
             self.assertEqual(saved_payload["summary"]["artifact_freshness"]["tracked_file_count"], 11)
             self.assertGreaterEqual(len(saved_payload["summary"]["artifact_freshness"]["stale_labels"]), 1)
             self.assertIn("latest_json", saved_payload["summary"]["artifact_freshness"]["stale_labels"])
             self.assertIn("## Artifact freshness", markdown_path.read_text())
+            self.assertIn("## Archive snapshot verification", markdown_path.read_text())
 
 
 if __name__ == "__main__":
