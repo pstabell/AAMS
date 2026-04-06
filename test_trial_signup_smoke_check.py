@@ -2148,6 +2148,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertEqual(sorted(verification["owner_ready_content_verification"]["matching_files"]), ["render_support", "traction", "verification_shell"])
         self.assertTrue(verification["escalation_packet_content_verification"]["ok"])
         self.assertIn("render-support-message.txt", verification["escalation_packet_content_verification"]["matching_files"])
+        self.assertTrue(verification["archived_manifest_hash_verification"]["ok"])
+        self.assertIn("render-support-message.txt", verification["archived_manifest_hash_verification"]["matching_files"])
         self.assertTrue(verification["packet_bundle_verification"]["checksum_matches"])
 
     def test_build_archive_snapshot_verification_flags_missing_archives(self):
@@ -2170,6 +2172,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertEqual(verification["owner_ready_content_verification"]["mismatched_files"], [])
         self.assertEqual(verification["escalation_packet_content_verification"]["matching_files"], [])
         self.assertEqual(verification["escalation_packet_content_verification"]["mismatched_files"], [])
+        self.assertFalse(verification["archived_manifest_hash_verification"]["checked"])
+        self.assertFalse(verification["archived_manifest_hash_verification"]["ok"])
         self.assertFalse(verification["packet_bundle_verification"]["checksum_matches"])
 
     def test_build_archive_snapshot_verification_detects_content_drift(self):
@@ -2199,6 +2203,8 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
         self.assertEqual(verification["owner_ready_content_verification"]["mismatched_files"], ["traction"])
         self.assertFalse(verification["escalation_packet_content_verification"]["ok"])
         self.assertEqual(verification["escalation_packet_content_verification"]["mismatched_files"], ["render-support-message.txt"])
+        self.assertFalse(verification["archived_manifest_hash_verification"]["ok"])
+        self.assertEqual(verification["archived_manifest_hash_verification"]["mismatched_files"], ["render-support-message.txt"])
         self.assertTrue(verification["packet_bundle_verification"]["checksum_matches"])
 
     def test_main_reports_artifact_freshness_surfaces_nondefault_output_paths_as_stale(self):

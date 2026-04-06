@@ -1751,6 +1751,39 @@ def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any
             escalation_packet_content_verification["mismatched_files"].append(filename)
     escalation_packet_content_verification["ok"] = not escalation_packet_content_verification["mismatched_files"]
 
+    archived_manifest_hash_verification = {
+        "checked": False,
+        "manifest_exists": False,
+        "manifest_packet_hash_count": 0,
+        "matching_files": [],
+        "missing_files": [],
+        "mismatched_files": [],
+        "ok": False,
+    }
+    archived_manifest_path = packet_archive_paths.get("evidence-manifest.json")
+    if archived_manifest_path and archived_manifest_path.exists():
+        archived_manifest_hash_verification["checked"] = True
+        archived_manifest_hash_verification["manifest_exists"] = True
+        archived_manifest = json.loads(archived_manifest_path.read_text(encoding="utf-8"))
+        archived_packet_hashes = archived_manifest.get("packet_hashes", {})
+        archived_manifest_hash_verification["manifest_packet_hash_count"] = len(archived_packet_hashes)
+        for filename, details in archived_packet_hashes.items():
+            if filename == "evidence-manifest.json":
+                continue
+            archived_path = packet_archive_paths.get(filename)
+            if archived_path is None:
+                continue
+            if not archived_path.exists():
+                archived_manifest_hash_verification["missing_files"].append(filename)
+                continue
+            recorded_hash = details.get("sha256")
+            actual_hash = hashlib.sha256(archived_path.read_bytes()).hexdigest()
+            if recorded_hash and recorded_hash == actual_hash:
+                archived_manifest_hash_verification["matching_files"].append(filename)
+            else:
+                archived_manifest_hash_verification["mismatched_files"].append(filename)
+        archived_manifest_hash_verification["ok"] = not archived_manifest_hash_verification["missing_files"] and not archived_manifest_hash_verification["mismatched_files"]
+
     return {
         "generated_at": report.get("generated_at"),
         "missing_files": missing_files,
@@ -1760,12 +1793,14 @@ def build_archive_snapshot_verification(report: dict[str, Any]) -> dict[str, Any
         "escalation_packet_archive_present_count": sum(1 for path in packet_archive_paths.values() if path.exists()),
         "owner_ready_content_verification": owner_ready_content_verification,
         "escalation_packet_content_verification": escalation_packet_content_verification,
+        "archived_manifest_hash_verification": archived_manifest_hash_verification,
         "packet_bundle_verification": packet_bundle_verification,
         "files": existing_files,
         "ok": (
             not missing_files
             and owner_ready_content_verification.get("ok", False)
             and escalation_packet_content_verification.get("ok", False)
+            and archived_manifest_hash_verification.get("ok", False)
             and packet_bundle_verification.get("checksum_matches", False)
         ),
     }
