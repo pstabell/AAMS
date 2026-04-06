@@ -2493,11 +2493,9 @@ def main(argv: list[str] | None = None) -> int:
 
     previous_report = load_previous_report(args.json_out)
     report = generate_report(previous_report=previous_report)
-    payload = json.dumps(report, indent=2, sort_keys=True)
-    print(payload)
 
     if args.json_out:
-        Path(args.json_out).write_text(payload + "\n", encoding="utf-8")
+        Path(args.json_out).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if args.markdown_out:
         Path(args.markdown_out).write_text(render_markdown_report(report), encoding="utf-8")
     if args.owner_messages_dir:
@@ -2516,6 +2514,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.markdown_out:
         Path(args.markdown_out).write_text(render_markdown_report(report), encoding="utf-8")
 
+    print(refreshed_payload)
     return 0 if report["summary"]["ready_for_live_e2e"] else 1
 
 

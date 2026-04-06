@@ -2,26 +2,26 @@
   "artifact_inventory": {
     "escalation_packet_archive": {
       "exists": true,
-      "file_count": 48,
+      "file_count": 42,
       "latest_files": [
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-escalation-packet.zip.sha256",
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-escalation-packet.zip",
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-README.txt",
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-evidence-manifest.json",
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-render-support-payload.json",
-        "docs/smoke-checks/escalation-packet/archive/2026-04-06T01-14-54-130152-00-00-render-support-message.txt"
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-escalation-packet.zip.sha256",
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-escalation-packet.zip",
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-README.txt",
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-evidence-manifest.json",
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-render-support-payload.json",
+        "docs/smoke-checks/escalation-packet/archive/2026-04-05T21-16-09-665025-00-00-render-support-message.txt"
       ],
       "path": "docs/smoke-checks/escalation-packet/archive"
     },
     "escalation_packet_bundle": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.141043+00:00",
+      "modified_at": "2026-04-05T21:16:10.793971+00:00",
       "path": "docs/smoke-checks/escalation-packet/escalation-packet.zip",
-      "size_bytes": 4811
+      "size_bytes": 4801
     },
     "escalation_packet_bundle_checksum": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.141677+00:00",
+      "modified_at": "2026-04-05T21:16:10.794633+00:00",
       "path": "docs/smoke-checks/escalation-packet/escalation-packet.zip.sha256",
       "size_bytes": 88
     },
@@ -39,68 +39,68 @@
     },
     "escalation_packet_manifest": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.140529+00:00",
+      "modified_at": "2026-04-05T21:16:10.793444+00:00",
       "path": "docs/smoke-checks/escalation-packet/evidence-manifest.json",
-      "size_bytes": 10069
+      "size_bytes": 10068
     },
     "escalation_packet_message": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.140231+00:00",
+      "modified_at": "2026-04-05T21:16:10.793192+00:00",
       "path": "docs/smoke-checks/escalation-packet/render-support-message.txt",
       "size_bytes": 2406
     },
     "escalation_packet_payload": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.140365+00:00",
+      "modified_at": "2026-04-05T21:16:10.793322+00:00",
       "path": "docs/smoke-checks/escalation-packet/render-support-payload.json",
       "size_bytes": 1392
     },
     "escalation_packet_readme": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.140668+00:00",
+      "modified_at": "2026-04-05T21:16:10.793591+00:00",
       "path": "docs/smoke-checks/escalation-packet/README.txt",
       "size_bytes": 3242
     },
     "latest_json": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.149759+00:00",
+      "modified_at": "2026-04-05T23:16:44.261847+00:00",
       "path": "docs/smoke-checks/latest-trial-signup-smoke-check.json",
-      "size_bytes": 48701
+      "size_bytes": 47777
     },
     "latest_markdown": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.150084+00:00",
+      "modified_at": "2026-04-05T23:16:44.262151+00:00",
       "path": "docs/smoke-checks/latest-trial-signup-smoke-check.md",
-      "size_bytes": 32077
+      "size_bytes": 31281
     },
     "owner_ready_archive": {
       "exists": true,
-      "file_count": 48,
+      "file_count": 45,
       "latest_files": [
-        "docs/smoke-checks/owner-ready/archive/2026-04-06T01-14-54-130152-00-00-verification_shell.txt",
-        "docs/smoke-checks/owner-ready/archive/2026-04-06T01-14-54-130152-00-00-render_support.txt",
-        "docs/smoke-checks/owner-ready/archive/2026-04-06T01-14-54-130152-00-00-traction.txt",
         "docs/smoke-checks/owner-ready/archive/2026-04-05T21-16-09-665025-00-00-verification_shell.txt",
         "docs/smoke-checks/owner-ready/archive/2026-04-05T21-16-09-665025-00-00-render_support.txt",
-        "docs/smoke-checks/owner-ready/archive/2026-04-05T21-16-09-665025-00-00-traction.txt"
+        "docs/smoke-checks/owner-ready/archive/2026-04-05T21-16-09-665025-00-00-traction.txt",
+        "docs/smoke-checks/owner-ready/archive/2026-04-05T19-18-19-895259-00-00-verification_shell.txt",
+        "docs/smoke-checks/owner-ready/archive/2026-04-05T19-18-19-895259-00-00-render_support.txt",
+        "docs/smoke-checks/owner-ready/archive/2026-04-05T19-18-19-895259-00-00-traction.txt"
       ],
       "path": "docs/smoke-checks/owner-ready/archive"
     },
     "owner_ready_render_support": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.135900+00:00",
+      "modified_at": "2026-04-05T21:16:10.788953+00:00",
       "path": "docs/smoke-checks/owner-ready/render_support.txt",
       "size_bytes": 726
     },
     "owner_ready_traction": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.135778+00:00",
+      "modified_at": "2026-04-05T21:16:10.788828+00:00",
       "path": "docs/smoke-checks/owner-ready/traction.txt",
       "size_bytes": 651
     },
     "owner_ready_verification_shell": {
       "exists": true,
-      "modified_at": "2026-04-06T01:14:55.136045+00:00",
+      "modified_at": "2026-04-05T21:16:10.789050+00:00",
       "path": "docs/smoke-checks/owner-ready/verification_shell.txt",
       "size_bytes": 584
     },
@@ -138,15 +138,15 @@
     ],
     "smoke_check_script": {
       "exists": true,
-      "modified_at": "2026-04-06T01:15:46.198407+00:00",
+      "modified_at": "2026-04-05T23:16:31.029887+00:00",
       "path": "scripts/trial_signup_smoke_check.py",
-      "size_bytes": 112416
+      "size_bytes": 112428
     },
     "smoke_check_tests": {
       "exists": true,
-      "modified_at": "2026-04-06T01:16:36.230154+00:00",
+      "modified_at": "2026-04-05T23:16:14.138637+00:00",
       "path": "test_trial_signup_smoke_check.py",
-      "size_bytes": 105613
+      "size_bytes": 105026
     },
     "traction_handoff_files": [
       "docs/TRIAL_SIGNUP_E2E_REPORT_2026-04-01.md",
@@ -164,28 +164,28 @@
       "size_bytes": 22411
     }
   },
-  "generated_at": "2026-04-06T01:16:50.774075+00:00",
+  "generated_at": "2026-04-06T01:14:54.130152+00:00",
   "packet_hashes": {
     "evidence-manifest.json": {
-      "sha256": "0925a86028c8b581cad7ac5cbe5f6d3e5146ebe932f012a0937aa937eeceb9a4",
+      "sha256": "be9fb31fba25030c0a4e7c6f01f5391ef093183fac86dd1ed574db1dfe15f8fa",
       "size_bytes": 9921
     },
     "latest-trial-signup-smoke-check.json": {
       "path": "docs/smoke-checks/latest-trial-signup-smoke-check.json",
-      "sha256": "abbd0df1842033d993e85c64226b87546aa595f9c81e63c118281d48dda6804a",
-      "size_bytes": 51073
+      "sha256": "e39fdb1eb3b65d3576a81da86b58065851e3ea7115e5355d2c9be5e63fde84c9",
+      "size_bytes": 47553
     },
     "latest-trial-signup-smoke-check.md": {
       "path": "docs/smoke-checks/latest-trial-signup-smoke-check.md",
-      "sha256": "fb9059f596b1a3ea9d7e23f0d034bc62b8da456abcffb6053e75b79f8f4b8d9d",
-      "size_bytes": 32758
+      "sha256": "1b598ae4dae0d909d03f8075a1f9b2ca256394b075a9d17a47e21a232ad611a0",
+      "size_bytes": 31197
     },
     "render-support-message.txt": {
-      "sha256": "412c2e4318ab0fd00a4297779841274994172fa0b70475ce3b0d007f5c79f2d1",
+      "sha256": "7ab3274ae6614c4ba82dcb4c0efeca1c1ffee0ccd2c742d0e9694d7ea2d6a0de",
       "size_bytes": 2406
     },
     "render-support-payload.json": {
-      "sha256": "aa3bb777060b3c42184702b20ddabee215625280406f94758008960644775cb7",
+      "sha256": "374eaf504446125dbfa52c79b93a1a9117b860f70d4bd64d1558a1c51cf1698a",
       "size_bytes": 1392
     }
   },

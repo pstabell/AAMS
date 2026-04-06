@@ -1889,7 +1889,7 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             escalation_dir = pathlib.Path(temp_dir) / "escalation-packet"
             escalation_archive_dir = pathlib.Path(temp_dir) / "escalation-packet-archive"
 
-            with mock.patch.object(smoke, "generate_report", return_value=report), mock.patch.object(smoke, "load_previous_report", return_value=None), mock.patch("sys.stdout"):
+            with mock.patch.object(smoke, "generate_report", return_value=report), mock.patch.object(smoke, "load_previous_report", return_value=None), mock.patch("sys.stdout") as stdout:
                 exit_code = smoke.main([
                     "--json-out",
                     str(json_path),
@@ -1924,7 +1924,12 @@ def _build_checkout_kwargs(email: str, accepted_at: str, price_id: str, app_url:
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-README.txt").exists())
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-escalation-packet.zip").exists())
             self.assertTrue((escalation_archive_dir / "2026-04-05T05-14-58-289624-00-00-escalation-packet.zip.sha256").exists())
-            self.assertTrue(json.loads(json_path.read_text())["summary"]["ready_for_live_e2e"])
+            saved_payload = json.loads(json_path.read_text())
+            stdout_payload = json.loads("".join(call.args[0] for call in stdout.write.call_args_list))
+            self.assertTrue(saved_payload["summary"]["ready_for_live_e2e"])
+            self.assertEqual(stdout_payload, saved_payload)
+            self.assertIn("owner_ready_traction", saved_payload["summary"]["artifact_inventory"])
+            self.assertIn("escalation_packet_bundle", saved_payload["summary"]["artifact_inventory"])
             self.assertIn("Trial Signup Smoke Check Snapshot", markdown_path.read_text())
 
     def test_main_returns_one_when_public_webhook_or_env_is_missing(self):
